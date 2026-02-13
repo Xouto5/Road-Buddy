@@ -1,0 +1,1 @@
+# here is like where we explain what the app is about, how it shoudl work, and what it should do. but tirreeddddddddddd -jerry
