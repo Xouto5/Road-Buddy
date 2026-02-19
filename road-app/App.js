@@ -21,11 +21,7 @@ export default function App() {
       <Stack.Navigator initialRouteName="TempMenu">
         <Stack.Screen name="TempMenu" component={TempMenuScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
-<<<<<<< HEAD
         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
-=======
-         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
->>>>>>> 131b29eb2a67cf4dd8ce3ae8b265b924366266cf
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Plan" component={HomeScreen} />
         <Stack.Screen name="Overview" component={TripDetailsScreen} />
@@ -34,4 +30,3 @@ export default function App() {
     </NavigationContainer>
   );
 }
-
