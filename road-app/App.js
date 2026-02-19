@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "./src/features/trip/screens/HomeScreen";
 import TripsSummaryScreen from "./src/features/trip/screens/TripsSummaryScreen";
 import TripDetailsScreen from "./src/features/trip/screens/TripDetailsScreen";
+import ProfileSetupScreen from "./src/features/auth/screens/ProfileSetupScreen";
 
 // Temporary Menu Screen. Will be removed
 import TempMenuScreen from "./src/navigation/TempMenu";
