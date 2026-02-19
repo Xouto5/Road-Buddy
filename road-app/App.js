@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "./src/features/trip/screens/HomeScreen";
 import TripsSummaryScreen from "./src/features/trip/screens/TripsSummaryScreen";
 import TripDetailsScreen from "./src/features/trip/screens/TripDetailsScreen";
+import ProfileSetupScreen from "./src/features/auth/screens/ProfileSetupScreen";
 
 // Temporary Menu Screen. Will be removed
 import TempMenuScreen from "./src/navigation/TempMenu";
@@ -21,7 +22,7 @@ export default function App() {
       <Stack.Navigator initialRouteName="TempMenu">
         <Stack.Screen name="TempMenu" component={TempMenuScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
-         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+        <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Plan" component={HomeScreen} />
         <Stack.Screen name="Overview" component={TripDetailsScreen} />
@@ -30,4 +31,3 @@ export default function App() {
     </NavigationContainer>
   );
 }
-
