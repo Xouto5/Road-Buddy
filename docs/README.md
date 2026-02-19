@@ -44,11 +44,13 @@ Before doing anything else, always make sure you are synced with master.
 ```bash
 git fetch origin
 git reset --hard origin/master
+git push --force-with-lease
 ```
 
 Make sure you are already on your branch with `git checkout "Your Name"`
+`git push --force-with-lease` Updates your branch (sync)
 ⚠ WARNING:
-`git reset --hard` will delete any uncommitted changes (local changes) on the current branch.
+`git reset --hard` will delete any uncommitted changes (local changes) on the current branch (This is what I do, but you can just `git merge origin/master` to save local changes and latest master updates)
 
 ------------------------------------
 
