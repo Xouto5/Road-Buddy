@@ -1,26 +1,32 @@
-// Manuel
-
-//import navigation, StatusBar for handling status bar and screens
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StatusBar } from 'expo-status-bar';
+import React from "react";
+import { StatusBar } from "expo-status-bar";
 import LoginScreen from "./src/features/auth/screens/LoginScreen";
-import ProfileSetupScreen from "./src/features/auth/screens/ProfileSetupScreen";
+import SettingsScreen from "./src/features/settings/screens/SettingsScreen";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import HomeScreen from "./src/features/trip/screens/HomeScreen";
+import TripsSummaryScreen from "./src/features/trip/screens/TripsSummaryScreen";
+import TripDetailsScreen from "./src/features/trip/screens/TripDetailsScreen";
+
+// Temporary Menu Screen. Will be removed
+import TempMenuScreen from "./src/navigation/TempMenu";
 
 // Create a stack navigator instance
 const Stack = createNativeStackNavigator();
 
-
 export default function App() {
   return (
-    // Wrap the app in NavigationContainer to enable navigation for login, setting profile and
+    // Added temporary navigation to each screens. Added Manuel's changes.
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
+      <Stack.Navigator initialRouteName="TempMenu">
+        <Stack.Screen name="TempMenu" component={TempMenuScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Plan" component={HomeScreen} />
+        <Stack.Screen name="Overview" component={TripDetailsScreen} />
+        <Stack.Screen name="Trips" component={TripsSummaryScreen} />
       </Stack.Navigator>
-      <StatusBar style="auto" />
     </NavigationContainer>
   );
 }

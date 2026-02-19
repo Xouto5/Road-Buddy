@@ -2,10 +2,10 @@
 
 import { View, Text, StyleSheet } from "react-native";
 
-export default function HomeScreen() {
+export default function TripsSummaryScreen() {
   return (
     <View>
-      <Text>This is the Home page</Text>
+      <Text>This is the Trips Summary/History page</Text>
     </View>
   );
 }
