@@ -43,11 +43,11 @@ Before doing anything else, always make sure you are synced with master.
 
 ```bash
 git fetch origin
-git checkout master
 git reset --hard origin/master
 ```
 
-⚠ WARNING:  
+Make sure you are already on your branch with `git checkout "Your Name"`
+⚠ WARNING:
 `git reset --hard` will delete any uncommitted changes (local changes) on the current branch.
 
 ------------------------------------
