@@ -4,6 +4,7 @@ import LoginScreen from "./src/features/auth/screens/LoginScreen";
 import SettingsScreen from "./src/features/settings/screens/SettingsScreen";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "./src/features/trip/screens/HomeScreen";
 import TripsSummaryScreen from "./src/features/trip/screens/TripsSummaryScreen";
 import TripDetailsScreen from "./src/features/trip/screens/TripDetailsScreen";
