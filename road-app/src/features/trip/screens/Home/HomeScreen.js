@@ -1,4 +1,11 @@
-// if Home is “Start a trip / Continue / Saved trips”. Basically the trip entry pointimport { View, Text, StyleSheet } from "react-native";
+/*
+HomeScreen Component                      
+Default screen when authenticated.
+Prompts user for trip information and displays brief estimate.
+
+Author: Bryan Cardeno                               
+Date: 02-21-2026 
+*/
 
 import { View, Text, StyleSheet, Pressable, TextInput } from "react-native";
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
@@ -6,12 +13,13 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import TripDetailsScreen from "../TripDetailsScreen";
-import { useState } from "react";
+import TextInputField from "../../../../shared/component/TextInputField";
+import SelectField from "../../../../shared/component/SelectField";
+import { useState, useEffect } from "react";
 
 const Tab = createBottomTabNavigator();
 
-export default function HomeScreen() {
-  const [userName, setUserName] = useState("Road Buddy"); // temporary. gonna be replaced by props
+export default function HomeScreen({ userName }) {
   const [startLocation, setStartLocation] = useState("");
   const [destination, setDestination] = useState("");
   const [vehicle, setVehicle] = useState("");
@@ -32,39 +40,49 @@ export default function HomeScreen() {
     console.log("vehicle select pressed");
   };
 
+  const onStartLocationChange = (e) => {
+    console.log("startlocation input changed", e);
+    setStartLocation(e);
+  };
+
+  useEffect(() => {
+    console.log("startlocation value:", startLocation);
+  }, [startLocation]);
+
+  const onDestinationChange = (e) => {
+    console.log("destination input changed", e);
+    setDestination(e);
+    console.log("destination value:", destination);
+  };
+
+  useEffect(() => {
+    console.log("destination value:", destination);
+  }, [destination]);
+
   return (
     <View style={styles.container}>
       <View style={styles.screenTitle}>
-        <Text style={styles.title}>Welcome {userName}</Text>
+        <Text style={styles.title}>Welcome {userName || "Road Buddy"}</Text>
       </View>
 
       <View style={styles.content}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Starting Location</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter starting location"
-            placeholderTextColor="#94a3b8"
-          />
-        </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Destination</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter destination"
-            placeholderTextColor="#94a3b8"
-          />
-        </View>
+        <TextInputField
+          label="Starting Location"
+          placeholder="Enter starting location"
+          handleInputChange={onStartLocationChange}
+        />
 
-        <Pressable onPress={onSelectVehicle}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Vehicle</Text>
+        <TextInputField
+          label="Destination"
+          placeholder="Enter destination"
+          handleInputChange={onDestinationChange}
+        />
 
-            <View style={styles.vechileInputContainer}>
-              <Text style={styles.vechileText}>Select a vehicle</Text>
-            </View>
-          </View>
-        </Pressable>
+        <SelectField
+          label="Vehicle"
+          placeholder="Select a vehicle"
+          handlePress={onSelectVehicle}
+        />
 
         <Pressable onPress={onQuickCalc}>
           <View style={styles.caclBtnContainer}>
@@ -157,7 +175,7 @@ const styles = StyleSheet.create({
     // borderWidth: 1,
     paddingVertical: 5,
     paddingHorizontal: 3,
-    borderRadius: 6,
+    // borderRadius: 6,
   },
   overviewContainer: {
     justifyContent: "flex-end",
