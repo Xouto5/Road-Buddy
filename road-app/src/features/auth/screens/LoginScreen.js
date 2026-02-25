@@ -1,4 +1,6 @@
-// Manuel
+// I have created the text boxes for username and passowrd outline. Added barely any CSS to it too -Manuel
+
+
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
