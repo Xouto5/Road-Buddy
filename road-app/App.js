@@ -1,23 +1,30 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import LoginScreen from "./src/features/auth/screens/LoginScreen";
 import SettingsScreen from "./src/features/settings/screens/SettingsScreen";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import HomeScreen from "./src/features/trip/screens/HomeScreen";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import HomeScreen from "./src/features/trip/screens/Home/HomeScreen";
 import TripsSummaryScreen from "./src/features/trip/screens/TripsSummaryScreen";
 import TripDetailsScreen from "./src/features/trip/screens/TripDetailsScreen";
 import ProfileSetupScreen from "./src/features/auth/screens/ProfileSetupScreen";
-
-// Temporary Menu Screen. Will be removed
-import TempMenuScreen from "./src/navigation/TempMenu";
+import TempMenuScreen from "./src/navigation/TempMenu"; 
+//import { performFirestoreOperations } from "./src/core/firebase/firebaseConfig"; 
 
 // Create a stack navigator instance
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  useEffect(() => {
+    const fetchData = async () => {
+      // Example: Only call if specific condition
+      // await performFirestoreOperations(); 
+    };
+    fetchData();
+  }, []);
+
   return (
-    // Added temporary navigation to each screens. Added Manuel's changes.
     <NavigationContainer>
       <Stack.Navigator initialRouteName="TempMenu">
         <Stack.Screen name="TempMenu" component={TempMenuScreen} />
@@ -31,3 +38,4 @@ export default function App() {
     </NavigationContainer>
   );
 }
+

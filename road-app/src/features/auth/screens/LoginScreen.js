@@ -2,6 +2,8 @@
 // Login screen for RoadBuddy app. Users can enter their username and password to log in, or use social login options. The screen also includes links for password recovery and account creation.
 // RoadBuddy Logo is at the top.
 // White back button is also at the top left corner of the screen to allow users to navigate back to the weclome screen.
+// I have created the text boxes for username and passowrd outline. Added barely any CSS to it too -Manuel
+
 
 // By: Keith Marco Acob
 // Finished on 02/24/2026

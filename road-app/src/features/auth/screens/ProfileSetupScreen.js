@@ -1,8 +1,11 @@
 // if it’s user/account setup like name, default people count, car MPG preferences, etc.
 // Manuel
 
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import React, { useState } from "react";
+import { View, Text, TextInput, Button, StyleSheet } from "react-native";
+//import { performFirestoreOperations } from "./src/core/firebase/firebaseConfig"; 
+
+
 
 // Set username and password of user
 export default function ProfileSetupScreen() {
@@ -10,14 +13,13 @@ export default function ProfileSetupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-
-  const handleProfileSetup = () => {
-    // Add profile setup logic here
+  /*
+  const handleProfileSetup = async () => {
     console.log('Profile set up with:', name, email, password);
+    // Call the Firestore operation to save the name and email
+    await performFirestoreOperations(name, email);
   };
-
-  
-  // Colors and placement of the boxes
+  */
 
   return (
     <View style={styles.container}>
@@ -70,3 +72,4 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 });
+
