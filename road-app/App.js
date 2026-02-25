@@ -9,6 +9,8 @@ import HomeScreen from "./src/features/trip/screens/Home/HomeScreen";
 import TripsSummaryScreen from "./src/features/trip/screens/TripsSummaryScreen";
 import TripDetailsScreen from "./src/features/trip/screens/TripDetailsScreen";
 import ProfileSetupScreen from "./src/features/auth/screens/ProfileSetupScreen";
+import CostScreen from "./src/features/cost/screens/CostScreen";
+
 import TempMenuScreen from "./src/navigation/TempMenu"; 
 //import { performFirestoreOperations } from "./src/core/firebase/firebaseConfig"; 
 
@@ -34,6 +36,7 @@ export default function App() {
         <Stack.Screen name="Plan" component={HomeScreen} />
         <Stack.Screen name="Overview" component={TripDetailsScreen} />
         <Stack.Screen name="Trips" component={TripsSummaryScreen} />
+        <Stack.Screen name="Cost" component={CostScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
