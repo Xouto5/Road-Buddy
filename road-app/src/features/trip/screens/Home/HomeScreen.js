@@ -93,14 +93,17 @@ export default function HomeScreen({ userName }) {
             label="Vehicle"
             placeholder="Select a vehicle"
             handlePress={onSelectVehicle}
-            // labelBgColor="pink"
+            labelBgColor={DARK_THEME.primaryBackground}
+            value={
+              vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+            }
           />
 
-          <Pressable onPress={onQuickCalc}>
-            <View style={styles.caclBtnContainer}>
+          <View style={styles.caclBtnContainer}>
+            <Pressable onPress={onQuickCalc}>
               <Text style={styles.calcBtn}>Quick calculate</Text>
-            </View>
-          </Pressable>
+            </Pressable>
+          </View>
 
           <View style={styles.quickEstimateContainer}>
             <View style={styles.estimateDetail}>
@@ -118,19 +121,19 @@ export default function HomeScreen({ userName }) {
               </View>
             </View>
 
-            <Pressable onPress={onSave}>
-              <View style={styles.saveBtnContainer}>
+            <View style={styles.saveBtnContainer}>
+              <Pressable onPress={onSave}>
                 <Text style={styles.calcBtn}>Save</Text>
-              </View>
-            </Pressable>
+              </Pressable>
+            </View>
           </View>
         </View>
 
-        <Pressable onPress={() => navigation.navigate("Overview")}>
-          <View style={styles.caclBtnContainer}>
+        <View style={styles.caclBtnContainer}>
+          <Pressable onPress={() => navigation.navigate("Overview")}>
             <Text style={styles.calcBtn}>View Overview</Text>
-          </View>
-        </Pressable>
+          </Pressable>
+        </View>
       </View>
 
       <Modal
@@ -139,7 +142,10 @@ export default function HomeScreen({ userName }) {
         animationType="slide"
       >
         {modalContext === MODAL_CONTEXT.CAR_SELECT && (
-          <VehicleSelection setVisibility={setIsModalVisible} />
+          <VehicleSelection
+            setVisibility={setIsModalVisible}
+            onVehicleSelect={setVehicle}
+          />
         )}
       </Modal>
     </View>
@@ -168,11 +174,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     flex: 1,
     justifyContent: "space-between",
-    // backgroundColor: "red",
   },
   contents: {
     gap: 20,
-    // backgroundColor: "green",
   },
   title: {
     color: DARK_THEME.primaryText,
@@ -195,7 +199,7 @@ const styles = StyleSheet.create({
   caclBtnContainer: {
     height: 50,
     borderWidth: 1,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#e4e4e4",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
@@ -205,11 +209,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   quickEstimateContainer: {
-    // flex: 1,
     height: 180,
     borderColor: "#fafafa",
     borderWidth: 1,
-    // backgroundColor: "red",
     justifyContent: "space-between",
     borderRadius: 10,
     borderBottomWidth: 0,
@@ -231,7 +233,7 @@ const styles = StyleSheet.create({
   saveBtnContainer: {
     height: 50,
     borderWidth: 0,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#e4e4e4",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
@@ -241,5 +243,8 @@ const styles = StyleSheet.create({
   textInput: {
     color: "#fafafa",
     paddingHorizontal: 15,
+  },
+  modal: {
+    // backgroundColor: DARK_THEME.modalBackground,
   },
 });

@@ -9,4 +9,11 @@ const carData = [
   { id: "8", year: 2024, make: "Subaru", model: "Outback", mpg_combined: 28 },
 ];
 
-export default carData;
+const userSavedCarId = [1, 4, 6, 7, 8];
+
+const sampleCarData = {
+  carData,
+  userSavedCarId,
+};
+
+export default sampleCarData;
