@@ -1,3 +1,11 @@
+/* ======================================== //
+CREDITS:
+
+MANUEL: 
+
+
+// ======================================== */
+
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { initializeAuth, getReactNativePersistence } from "firebase/auth";
 import { getFirestore, addDoc, collection, getDocs } from "firebase/firestore";
@@ -40,7 +48,7 @@ export const performFirestoreOperations = async (name, email) => {
   }
 
 
-  /*
+  /* Testing for firestore operations
   try {
     const docRef = await addDoc(collection(db, "users"), {
       first: "Ada",
