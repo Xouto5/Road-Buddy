@@ -3,4 +3,5 @@ export const DARK_THEME = {
   primaryText: "#fafafa",
   primaryBorder: "#fafafa",
   placeholder: "#94a3b8",
+  modalBackground: "#334155",
 };

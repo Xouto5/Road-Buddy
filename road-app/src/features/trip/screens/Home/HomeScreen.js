@@ -7,22 +7,30 @@ Author: Bryan Cardeno
 Date: 02-21-2026 
 */
 
-import { View, Text, StyleSheet, Pressable, TextInput } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
-import { NavigationContainer } from "@react-navigation/native";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
 
 import TripDetailsScreen from "../TripDetailsScreen";
+import VehicleSelection from "./VehicleSelection";
 import TextInputField from "../../../../shared/component/TextInputField";
 import SelectField from "../../../../shared/component/SelectField";
 import { useState, useEffect } from "react";
 
-const Tab = createBottomTabNavigator();
-
 export default function HomeScreen({ userName }) {
+  const MODAL_CONTEXT = {
+    START_LOC: "start",
+    END_LOC: "end",
+    CAR_SELECT: "vehicle",
+  };
+
+  const navigation = useNavigation();
+
   const [startLocation, setStartLocation] = useState("");
   const [destination, setDestination] = useState("");
   const [vehicle, setVehicle] = useState("");
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalContext, setModalContext] = useState(null);
 
   const onQuickCalc = () => {
     console.log("quick save pressed");
@@ -37,7 +45,9 @@ export default function HomeScreen({ userName }) {
   };
 
   const onSelectVehicle = () => {
-    console.log("vehicle select pressed");
+    console.log("test");
+    setModalContext(MODAL_CONTEXT.CAR_SELECT);
+    setIsModalVisible(true);
   };
 
   const onStartLocationChange = (e) => {
@@ -65,59 +75,79 @@ export default function HomeScreen({ userName }) {
         <Text style={styles.title}>Welcome {userName || "Road Buddy"}</Text>
       </View>
 
-      <View style={styles.content}>
-        <TextInputField
-          label="Starting Location"
-          placeholder="Enter starting location"
-          handleInputChange={onStartLocationChange}
-        />
+      <View style={styles.contentContainer}>
+        <View style={styles.contents}>
+          <TextInputField
+            label="Starting Location"
+            placeholder="Enter starting location"
+            handleInputChange={onStartLocationChange}
+          />
 
-        <TextInputField
-          label="Destination"
-          placeholder="Enter destination"
-          handleInputChange={onDestinationChange}
-        />
+          <TextInputField
+            label="Destination"
+            placeholder="Enter destination"
+            handleInputChange={onDestinationChange}
+          />
 
-        <SelectField
-          label="Vehicle"
-          placeholder="Select a vehicle"
-          handlePress={onSelectVehicle}
-        />
+          <SelectField
+            label="Vehicle"
+            placeholder="Select a vehicle"
+            handlePress={onSelectVehicle}
+            labelBgColor={DARK_THEME.primaryBackground}
+            value={
+              vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+            }
+          />
 
-        <Pressable onPress={onQuickCalc}>
           <View style={styles.caclBtnContainer}>
-            <Text style={styles.calcBtn}>Quick calculate</Text>
-          </View>
-        </Pressable>
-
-        <View style={styles.quickEstimateContainer}>
-          <View style={styles.estimateDetail}>
-            <View style={styles.estimateRow}>
-              <Text style={styles.estimateLabel}>Distance: </Text>
-              <Text style={styles.estimateData}>50 mi</Text>
-            </View>
-            <View style={styles.estimateRow}>
-              <Text style={styles.estimateLabel}>Estimated Cost : </Text>
-              <Text style={styles.estimateData}>$50.00</Text>
-            </View>
-            <View style={styles.estimateRow}>
-              <Text style={styles.estimateLabel}>ETA: </Text>
-              <Text style={styles.estimateData}>40 min</Text>
-            </View>
+            <Pressable onPress={onQuickCalc}>
+              <Text style={styles.calcBtn}>Quick calculate</Text>
+            </Pressable>
           </View>
 
-          <Pressable onPress={onSave}>
+          <View style={styles.quickEstimateContainer}>
+            <View style={styles.estimateDetail}>
+              <View style={styles.estimateRow}>
+                <Text style={styles.estimateLabel}>Distance: </Text>
+                <Text style={styles.estimateData}>50 mi</Text>
+              </View>
+              <View style={styles.estimateRow}>
+                <Text style={styles.estimateLabel}>Estimated Cost : </Text>
+                <Text style={styles.estimateData}>$50.00</Text>
+              </View>
+              <View style={styles.estimateRow}>
+                <Text style={styles.estimateLabel}>ETA: </Text>
+                <Text style={styles.estimateData}>40 min</Text>
+              </View>
+            </View>
+
             <View style={styles.saveBtnContainer}>
-              <Text style={styles.calcBtn}>Save</Text>
+              <Pressable onPress={onSave}>
+                <Text style={styles.calcBtn}>Save</Text>
+              </Pressable>
             </View>
+          </View>
+        </View>
+
+        <View style={styles.caclBtnContainer}>
+          <Pressable onPress={() => navigation.navigate("Overview")}>
+            <Text style={styles.calcBtn}>View Overview</Text>
           </Pressable>
         </View>
       </View>
-      <Pressable onPress={onViewOverview}>
-        <View style={styles.caclBtnContainer}>
-          <Text style={styles.calcBtn}>View Overview</Text>
-        </View>
-      </Pressable>
+
+      <Modal
+        style={styles.modal}
+        visible={isModalVisible}
+        animationType="slide"
+      >
+        {modalContext === MODAL_CONTEXT.CAR_SELECT && (
+          <VehicleSelection
+            setVisibility={setIsModalVisible}
+            onVehicleSelect={setVehicle}
+          />
+        )}
+      </Modal>
     </View>
   );
 }
@@ -127,8 +157,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DARK_THEME.primaryBackground,
     gap: 20,
-    // alignItems: "center",
-    // paddingHorizontal: 10,
   },
   screenTitle: {
     alignItems: "center",
@@ -141,62 +169,37 @@ const styles = StyleSheet.create({
     width: "90%",
     alignSelf: "center",
   },
-  content: {
-    // borderColor: "lightblue",
-    // borderWidth: 1,
+  contentContainer: {
     paddingHorizontal: 40,
-    gap: 20,
+    paddingVertical: 10,
     flex: 1,
-    paddingTop: 20,
+    justifyContent: "space-between",
   },
-  text: {
-    color: DARK_THEME.primaryText,
+  contents: {
+    gap: 20,
   },
   title: {
     color: DARK_THEME.primaryText,
     fontSize: 24,
   },
-  inputContainer: {
-    borderColor: "#fafafa",
-    borderWidth: 1,
-    borderRadius: 6,
-    height: 50,
-    justifyContent: "center",
-  },
-  inputLabel: {
-    position: "absolute",
-    top: -20,
-    left: 10,
-    fontWeight: "bold",
-    fontSize: 18,
-    color: "#fafafa",
-    // backgroundColor: "#fafafa",
-    backgroundColor: DARK_THEME.primaryBackground,
-    // borderWidth: 1,
-    paddingVertical: 5,
-    paddingHorizontal: 3,
-    // borderRadius: 6,
-  },
   overviewContainer: {
     justifyContent: "flex-end",
-    // borderColor: "red",
     borderWidth: 1,
   },
-  overviewBtn: {},
-  bottomNav: {
-    height: 100,
-    // borderColor: "pink",
-    borderWidth: 1,
-    justifyContent: "flex-end",
-    fontSize: 16,
-    fontFamily: "Georgia",
-    fontWeight: 300,
-  },
+  // not impelemented yet
+  // bottomNav: {
+  //   height: 100,
+  //   // borderColor: "pink",
+  //   borderWidth: 1,
+  //   justifyContent: "flex-end",
+  //   fontSize: 16,
+  //   fontFamily: "Georgia",
+  //   fontWeight: 300,
+  // },
   caclBtnContainer: {
     height: 50,
-    // borderColor: "pink",
     borderWidth: 1,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#e4e4e4",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
@@ -206,11 +209,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   quickEstimateContainer: {
-    // flex: 1,
     height: 180,
     borderColor: "#fafafa",
     borderWidth: 1,
-    // backgroundColor: "red",
     justifyContent: "space-between",
     borderRadius: 10,
     borderBottomWidth: 0,
@@ -231,9 +232,8 @@ const styles = StyleSheet.create({
   },
   saveBtnContainer: {
     height: 50,
-    // borderColor: "pink",
     borderWidth: 0,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#e4e4e4",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
@@ -244,16 +244,7 @@ const styles = StyleSheet.create({
     color: "#fafafa",
     paddingHorizontal: 15,
   },
-  vechileText: {
-    // paddingHorizontal: 15,
-    // backgroundColor: "red",
-    // flexBasis: "100%",
-    color: "#94a3b8",
-  },
-  vechileInputContainer: {
-    // backgroundColor: "red",
-    height: "100%",
-    justifyContent: "center",
-    paddingHorizontal: 15,
+  modal: {
+    // backgroundColor: DARK_THEME.modalBackground,
   },
 });
