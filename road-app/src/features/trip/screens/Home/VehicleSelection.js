@@ -22,7 +22,6 @@ function VehicleSelection({ setVisibility, onVehicleSelect }) {
   const [selectedVehicle, setSelectedVehicle] = useState({});
 
   const onItemPress = (id) => {
-    console.log("item  is pressed", id);
     setSavedVehicle((vehicles) => {
       const newVehicles = vehicles.map((car) => {
         if (car.id == id) setSelectedVehicle(car);
@@ -33,7 +32,6 @@ function VehicleSelection({ setVisibility, onVehicleSelect }) {
         };
       });
 
-      newVehicles.forEach((car) => console.log(car));
       return newVehicles;
     });
   };

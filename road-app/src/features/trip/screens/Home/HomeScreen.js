@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 
 import TripDetailsScreen from "../TripDetailsScreen";
 import VehicleSelection from "./VehicleSelection";
+import AddressSelection from "./AddressSelection";
 import TextInputField from "../../../../shared/component/TextInputField";
 import SelectField from "../../../../shared/component/SelectField";
 import { useState, useEffect } from "react";
@@ -51,23 +52,25 @@ export default function HomeScreen({ userName }) {
   };
 
   const onStartLocationChange = (e) => {
-    console.log("startlocation input changed", e);
-    setStartLocation(e);
+    console.log("startlocation input changed");
+    // setStartLocation(e);
+    setModalContext(MODAL_CONTEXT.START_LOC);
+    setIsModalVisible(true);
   };
 
-  useEffect(() => {
-    console.log("startlocation value:", startLocation);
-  }, [startLocation]);
+  // useEffect(() => {
+  //   console.log("startlocation value:", startLocation);
+  // }, [startLocation]);
 
   const onDestinationChange = (e) => {
-    console.log("destination input changed", e);
-    setDestination(e);
-    console.log("destination value:", destination);
+    // console.log("destination input changed", e);
+    setModalContext(MODAL_CONTEXT.END_LOC);
+    setIsModalVisible(true);
   };
 
-  useEffect(() => {
-    console.log("destination value:", destination);
-  }, [destination]);
+  // useEffect(() => {
+  //   console.log("destination value:", destination);
+  // }, [destination]);
 
   return (
     <View style={styles.container}>
@@ -77,16 +80,28 @@ export default function HomeScreen({ userName }) {
 
       <View style={styles.contentContainer}>
         <View style={styles.contents}>
-          <TextInputField
+          {/* <TextInputField
             label="Starting Location"
             placeholder="Enter starting location"
             handleInputChange={onStartLocationChange}
+          /> */}
+          <SelectField
+            label="Starting Location"
+            placeholder="Enter starting location"
+            handlePress={onStartLocationChange}
+            labelBgColor={DARK_THEME.primaryBackground}
           />
 
-          <TextInputField
+          {/* <TextInputField
             label="Destination"
             placeholder="Enter destination"
             handleInputChange={onDestinationChange}
+          /> */}
+          <SelectField
+            label="Destination"
+            placeholder="Enter destination"
+            handlePress={onDestinationChange}
+            labelBgColor={DARK_THEME.primaryBackground}
           />
 
           <SelectField
@@ -147,6 +162,14 @@ export default function HomeScreen({ userName }) {
             onVehicleSelect={setVehicle}
           />
         )}
+
+        {modalContext === MODAL_CONTEXT.START_LOC && (
+          <AddressSelection setVisibility={setIsModalVisible} />
+        )}
+
+        {modalContext === MODAL_CONTEXT.END_LOC && (
+          <AddressSelection setVisibility={setIsModalVisible} />
+        )}
       </Modal>
     </View>
   );
@@ -186,16 +209,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     borderWidth: 1,
   },
-  // not impelemented yet
-  // bottomNav: {
-  //   height: 100,
-  //   // borderColor: "pink",
-  //   borderWidth: 1,
-  //   justifyContent: "flex-end",
-  //   fontSize: 16,
-  //   fontFamily: "Georgia",
-  //   fontWeight: 300,
-  // },
   caclBtnContainer: {
     height: 50,
     borderWidth: 1,
