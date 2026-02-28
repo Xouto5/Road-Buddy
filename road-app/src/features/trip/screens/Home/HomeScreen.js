@@ -32,6 +32,7 @@ export default function HomeScreen({ userName }) {
   const [vehicle, setVehicle] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalContext, setModalContext] = useState(null);
+  const [sessionToken, setSessionToken] = useState(null);
 
   const onQuickCalc = () => {
     console.log("quick save pressed");

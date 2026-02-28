@@ -1,3 +1,11 @@
+/*
+VehicleSelection Component
+Retrieves one of the user's saved vehicle.
+
+Author: Bryan Cardeno                               
+Date: 02-24-2026 
+*/
+
 import {
   View,
   Button,

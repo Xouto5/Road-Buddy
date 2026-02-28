@@ -19,7 +19,12 @@ const returnFields = [
 
 // Refer to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch for fetching API documentation.
 
-const getGoogleAutocomplete = async () => {
+// TODO: Read more about sessionToken and calling the correct API once the user selects an address from autocomplete.
+// Google only bills 1 time per session, instead charging every single API calls each request without sessionToken.
+// Need to find the endpoint to "CONFIRM" location using placeId for the billing to only be charged per session.
+
+const getGoogleAutocomplete = async (userInput) => {
+  console.log("userinput in getgoogleautocomplete", userInput);
   try {
     const response = await fetch(GOOGLE_AUTOCOMPLETE_ENDPOINT, {
       method: "POST",
@@ -29,8 +34,8 @@ const getGoogleAutocomplete = async () => {
         "X-Goog-FieldMask": returnFields.join(","),
       },
       body: JSON.stringify({
-        input: "28278",
-        includedRegionCodes: "us",
+        input: userInput,
+        includedRegionCodes: "us", // currently restrict to US. We can update it in the future.
       }),
     });
     if (!response.ok) {
@@ -39,8 +44,10 @@ const getGoogleAutocomplete = async () => {
 
     const result = await response.json();
     console.log(result);
+
+    return result;
   } catch (error) {
-    console.error(error.message);
+    throw new Error(error);
   }
 };
 
