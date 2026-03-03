@@ -16,7 +16,8 @@ import VehicleSelection from "./VehicleSelection";
 import AddressSelection from "./AddressSelection";
 import TextInputField from "../../../../shared/component/TextInputField";
 import SelectField from "../../../../shared/component/SelectField";
-import { useState, useEffect } from "react";
+import * as Crypto from "expo-crypto";
+import { useState, useEffect, use } from "react";
 
 export default function HomeScreen({ userName }) {
   const MODAL_CONTEXT = {
@@ -32,7 +33,10 @@ export default function HomeScreen({ userName }) {
   const [vehicle, setVehicle] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalContext, setModalContext] = useState(null);
-  const [sessionToken, setSessionToken] = useState(null);
+  const [sessionToken, setSessionToken] = useState(() => Crypto.randomUUID());
+
+  console.log(sessionToken);
+  console.log(startLocation);
 
   const onQuickCalc = () => {
     console.log("quick save pressed");
@@ -91,6 +95,7 @@ export default function HomeScreen({ userName }) {
             placeholder="Enter starting location"
             handlePress={onStartLocationChange}
             labelBgColor={DARK_THEME.primaryBackground}
+            value={startLocation && startLocation.placePrediction.text.text}
           />
 
           {/* <TextInputField
@@ -103,6 +108,7 @@ export default function HomeScreen({ userName }) {
             placeholder="Enter destination"
             handlePress={onDestinationChange}
             labelBgColor={DARK_THEME.primaryBackground}
+            value={destination && destination.placePrediction.text.text}
           />
 
           <SelectField
@@ -165,11 +171,19 @@ export default function HomeScreen({ userName }) {
         )}
 
         {modalContext === MODAL_CONTEXT.START_LOC && (
-          <AddressSelection setVisibility={setIsModalVisible} />
+          <AddressSelection
+            setVisibility={setIsModalVisible}
+            sessToken={sessionToken}
+            setAddress={setStartLocation}
+          />
         )}
 
         {modalContext === MODAL_CONTEXT.END_LOC && (
-          <AddressSelection setVisibility={setIsModalVisible} />
+          <AddressSelection
+            setVisibility={setIsModalVisible}
+            sessToken={sessionToken}
+            setAddress={setDestination}
+          />
         )}
       </Modal>
     </View>
