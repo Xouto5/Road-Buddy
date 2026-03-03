@@ -13,53 +13,27 @@ import {
   Button,
   TextInput,
   FlatList,
+  Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import getGoogleAutocomplete from "../../services/googleAutocomplete";
+import {
+  getGoogleAutocomplete,
+  completeGoogleAddress,
+} from "../../services/googleAutocompleteService";
 import { useState } from "react";
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 
-const mockAutocompleteResponse = {
-  suggestions: [
-    {
-      placePrediction: {
-        placeId: "ChIJVTPokywQkFQRmtVEaUZlJRA",
-        text: {
-          text: "Seattle, WA, USA",
-        },
-      },
-    },
-    {
-      placePrediction: {
-        placeId: "ChIJP3Sa8ziYEmsRUKgyFmh9AQM",
-        text: {
-          text: "Sydney NSW, Australia",
-        },
-      },
-    },
-    {
-      placePrediction: {
-        placeId: "ChIJIQBpAG2ahYAR_6128GcTUEo",
-        text: {
-          text: "San Francisco, CA, USA",
-        },
-      },
-    },
-    {
-      placePrediction: {
-        placeId: "ChIJyWEHuEmuEmsRm9hTkapTCrk",
-        text: {
-          text: "New York, NY, USA",
-        },
-      },
-    },
-  ],
-};
-
-function AddressSelection({ setVisibility }) {
-  const [places, setPlaces] = useState(mockAutocompleteResponse.suggestions);
-  const handleModalVisibility = () => {
+function AddressSelection({ setVisibility, sessToken, setAddress }) {
+  const [places, setPlaces] = useState([]);
+  const closeModal = () => {
     setVisibility(false);
+  };
+
+  const handleAddressPress = async (item) => {
+    await completeGoogleAddress(item.placePrediction.placeId);
+
+    setAddress(item);
+    closeModal();
   };
 
   // TODO: Add a timer, prevents sending request on the 4th letter. Should be sent after a second or 2 not typing.
@@ -67,7 +41,7 @@ function AddressSelection({ setVisibility }) {
     try {
       // console.log(e.length);
       if (text.length > 3) {
-        const result = await getGoogleAutocomplete(text);
+        const result = await getGoogleAutocomplete(text, sessToken);
         console.log("google place result", result);
         setPlaces(result.suggestions);
       }
@@ -78,9 +52,11 @@ function AddressSelection({ setVisibility }) {
 
   const renderPlaces = ({ item }) => {
     return (
-      <View style={styles.itemContainer}>
-        <Text style={styles.itemText}>{item.placePrediction.text.text}</Text>
-      </View>
+      <Pressable onPress={() => handleAddressPress(item)}>
+        <View style={styles.itemContainer}>
+          <Text style={styles.itemText}>{item.placePrediction.text.text}</Text>
+        </View>
+      </Pressable>
     );
   };
 
@@ -102,7 +78,7 @@ function AddressSelection({ setVisibility }) {
         contentContainerStyle={styles.contentContainer}
       ></FlatList>
       <View>
-        <Button title="done" onPress={handleModalVisibility} />
+        <Button title="done" onPress={closeModal} />
       </View>
     </View>
   );
@@ -142,6 +118,8 @@ const styles = StyleSheet.create({
   },
   itemText: {
     color: "#E2E8F0",
+    // height: "100%",
+    // backgroundColor: "red",
     // textAlign: "center",
   },
 });

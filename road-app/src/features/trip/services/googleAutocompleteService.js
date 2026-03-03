@@ -7,12 +7,12 @@ Date: 02-26-2026
 */
 
 const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID;
-const GOOGLE_AUTOCOMPLETE_ENDPOINT =
+const GOOGLE_AUTOCOMPLETE_SEARCH_ENDPOINT =
   "https://places.googleapis.com/v1/places:autocomplete";
 
 // fields/properties returned by Google Place API. CSV format
 // https://developers.google.com/maps/documentation/places/web-service/place-autocomplete#fieldmask
-const returnFields = [
+const fieldMask = [
   "suggestions.placePrediction.placeId",
   "suggestions.placePrediction.text.text",
 ];
@@ -23,22 +23,24 @@ const returnFields = [
 // Google only bills 1 time per session, instead charging every single API calls each request without sessionToken.
 // Need to find the endpoint to "CONFIRM" location using placeId for the billing to only be charged per session.
 
-const getGoogleAutocomplete = async (userInput) => {
-  console.log("userinput in getgoogleautocomplete", userInput);
+export const getGoogleAutocomplete = async (userInput, sessToken) => {
+  console.log("userinput in getgoogleautocomplete", userInput, sessToken);
+  console.log(API_KEY);
   try {
-    const response = await fetch(GOOGLE_AUTOCOMPLETE_ENDPOINT, {
+    const response = await fetch(GOOGLE_AUTOCOMPLETE_SEARCH_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": API_KEY,
-        "X-Goog-FieldMask": returnFields.join(","),
+        "X-Goog-FieldMask": fieldMask.join(","),
       },
       body: JSON.stringify({
         input: userInput,
+        sessionToken: sessToken,
         includedRegionCodes: "us", // currently restrict to US. We can update it in the future.
       }),
     });
-    if (!response.ok) {
+    if (!response) {
       throw new Error(`Response status: ${response.status}`);
     }
 
@@ -51,4 +53,28 @@ const getGoogleAutocomplete = async (userInput) => {
   }
 };
 
-export default getGoogleAutocomplete;
+export const completeGoogleAddress = async (placeId, sessToken) => {
+  const url = `https://places.googleapis.com/v1/places/${placeId}?sessionToken=${sessToken}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": API_KEY,
+        "X-Goog-FieldMask":
+          "id,displayName,accessibilityOptions,businessStatus",
+      },
+    });
+
+    console.log(
+      "this is the response after submitting placeid",
+      response.status,
+    );
+    if (!response) {
+      throw new Error(`Response status: ${response.status}`);
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
