@@ -5,7 +5,7 @@
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 // Converts an address/place string into coordinates using Google Geocoding API
-/* export async function geocodeAddress(address) {
+export async function geocodeAddress(address) {
   if (!address || !address.trim()) {
     throw new Error("Address is required");
   }
@@ -41,8 +41,10 @@ const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
     placeId: best.place_id,
   };
 }
-*/
 
+
+
+/*
 //TEMP DELETE THIS - I cant test this without connecting debit/credit card ;((
 export async function geocodeAddress(address) {
   // Fake coordinates for testing
@@ -52,3 +54,5 @@ export async function geocodeAddress(address) {
     formattedAddress: address,
   };
 }
+
+*/
