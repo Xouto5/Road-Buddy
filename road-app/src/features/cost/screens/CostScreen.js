@@ -21,6 +21,9 @@ import useLocation from "../../../core/hooks/useLocation";
 import { geocodeAddress } from "../../trip/services/geocodeService";
 import { getDirections } from "../../trip/services/directionsService";
 import { milesToGallons, tripFuelCost, costPerMile } from "../services/calc";
+import { getGasPrice } from '../services/gasPriceService';
+import { getGasStationPrices } from '../services/gasPriceService';
+
 
 export default function CostScreen({ navigation }) {
   const { coords, loading, error } = useLocation();
@@ -53,22 +56,65 @@ export default function CostScreen({ navigation }) {
         console.error("❌ Geocode error:", e.message);
     }
   };
-
+  
   const handleGetDistance = async () => {
     try {
       setRouteError(null);
       setRouteInfo(null);
 
+      // Check if current location coordinates are available
       if (!coords) throw new Error("No current location coords yet");
+      
+      // Check if destination coordinates have been obtained from geocoding
+      if (!destCoords) throw new Error("Destination coordinates not set. Please geocode the destination first.");
 
       const origin = { lat: coords.latitude, lng: coords.longitude };
-      const result = await getDirections({ origin, destination: mockDestination });
+      
+      // Use the obtained destination coordinates
+      const result = await getDirections({ origin, destination: destCoords }); 
 
       setRouteInfo(result);
       console.log("✅ Directions result:", result);
     } catch (e) {
       setRouteError(e.message);
       console.error("❌ Directions error:", e.message);
+    }
+  };
+
+
+  /*
+  const handleGetGasPrice = async () => {
+    try {
+      const locationInput = destCoords ? `${destCoords.lat},${destCoords.lng}` : "your_zip_code"; // Fallback to a zip code if coordinates aren't available
+      const price = await getGasPrice(locationInput);
+      setGasPrice(price.toFixed(2)); // Update the gas price state
+      console.log(`Gas price fetched: $${price.toFixed(2)}`);
+    } catch (error) {
+      console.error("Error fetching gas price:", error.message);
+      setGasPrice(''); // Clear the state or set to an appropriate value
+      alert(`Failed to fetch gas price: ${error.message}`);
+    }
+  };
+  */
+
+
+  const handleGetGasPrice = async () => {
+    try {
+        if (coords) {
+            const priceData = await getGasStationPrices(coords.latitude, coords.longitude);
+            if (priceData.length > 0) {
+                const averagePrice = priceData.reduce((sum, station) => sum + (station.price_level || 0), 0) / priceData.length;
+                setGasPrice(averagePrice.toFixed(2)); // Update the gas price state
+                console.log(`Average gas price fetched: $${averagePrice.toFixed(2)}`);
+            } else {
+                alert("No gas stations found nearby.");
+            }
+        } else {
+            alert("Current location coordinates not available.");
+        }
+    } catch (error) {
+        console.error("Error fetching gas price:", error.message);
+        alert(`Failed to fetch gas price: ${error.message}`);
     }
   };
 
@@ -198,9 +244,13 @@ export default function CostScreen({ navigation }) {
               : ""}
           </Text>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={() => {}}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleGetGasPrice}>
             <Text style={styles.primaryButtonText}>Get Local Gas Price</Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
+
+          <Text style={{ color: "white", marginBottom: 10 }}>
+            {gasPrice ? `Current Gas Price: $${gasPrice}` : ""}
+          </Text>
 
           <TouchableOpacity style={styles.primaryButton} onPress={handleCalculate}>
             <Text style={styles.primaryButtonText}>Calculate Trip Cost</Text>
@@ -374,3 +424,4 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 });
+

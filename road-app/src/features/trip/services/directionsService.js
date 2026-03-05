@@ -4,7 +4,7 @@
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-/* function metersToMiles(meters) {
+function metersToMiles(meters) {
   return meters / 1609.344;
 }
 
@@ -57,8 +57,9 @@ export async function getDirections({ origin, destination, stops = [] }) {
     raw: data, // optional debugging; remove later if you want
   };
 }
-*/
 
+
+/*
 //TEMP DELETE THIS - I cant test this without connecting debit/credit card ;((
 export async function getDirections({ origin, destination, stops = [] }) {
   // Fake data for testing
@@ -68,3 +69,4 @@ export async function getDirections({ origin, destination, stops = [] }) {
     polyline: null,
   };
 }
+  */
