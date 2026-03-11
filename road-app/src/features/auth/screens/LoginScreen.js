@@ -2,10 +2,11 @@
 CREDITS:
 
 KEITH: Login screen for RoadBuddy app. Users can enter their username and password to log in, 
-  or use social login options. The screen also includes links for password recovery and account creation.
-  RoadBuddy Logo is at the top. White back button is also at the top left corner of the screen to allow users 
-  to navigate back to the weclome screen.
-  Finished on 02/24/2026
+       or use social login options. The screen also includes links for password recovery and account creation.
+       RoadBuddy Logo is at the top. White back button is also at the top left corner of the screen to allow users 
+       to navigate back to the weclome screen.
+
+       Date completed: 02/24/2026
 
 MANUEL:
   I have created the text boxes for username and passowrd outline. Added barely any CSS to it too
@@ -13,11 +14,9 @@ MANUEL:
 
 // ======================================== */
  
-
-
-
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, KeyboardAvoidingView, Platform, } from "react-native";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from "react-native";
+import { DARK_THEME } from "../../../shared/style/ColorScheme";
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
@@ -47,7 +46,7 @@ export default function LoginScreen({ navigation }) {
         <TextInput
           style={styles.input}
           placeholder="Username"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={DARK_THEME.placeholder}
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
@@ -56,7 +55,7 @@ export default function LoginScreen({ navigation }) {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={DARK_THEME.placeholder}
           value={password}
           onChangeText={setPassword}
           secureTextEntry={true}
@@ -90,7 +89,6 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.socialButtonText}>Login with Apple</Text>
         </TouchableOpacity>
       </View>
-
     </KeyboardAvoidingView>
   );
 }
@@ -98,7 +96,7 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1, 
-    backgroundColor: '#1E293B',
+    backgroundColor: DARK_THEME.primaryBackground,
     paddingHorizontal: 20,
   },
   backButton: {
@@ -107,7 +105,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   backText: {
-    color: '#FFFFFF',
+    color: DARK_THEME.primaryText,
     fontSize: 28,
     fontWeight: 'bold',
   },
@@ -116,8 +114,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logo: {
-    width: 240,
-    height: 100,
+    width: 330,
+    height: 190,
   },
   inputContainer: {
     width: '100%',
@@ -125,11 +123,12 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#FFFFFF',
+
+    borderColor: DARK_THEME.primaryBorder,
     borderRadius: 8,
     padding: 16,
     marginBottom: 20,
-    color: '#FFFFFF',
+    color: DARK_THEME.primaryText,
     fontSize: 16,
   },
   loginButton: {
@@ -150,7 +149,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   linkText: {
-    color: '#FFFFFF',
+    color: DARK_THEME.primaryText,
     fontSize: 14,
     marginBottom: 10,
   },

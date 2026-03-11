@@ -39,6 +39,11 @@ export default function TempMenuScreen() {
           title="Cost"
           onPress={() => navigation.navigate("Cost")}
         />
+        <Button
+          style={styles.buttons}
+          title="Estimate"
+          onPress={() => navigation.navigate("Estimate")}
+        />
 
         <Text style={{ color: "#fafafa", fontSize: 25 }}>
           This page is temporary. Will be removed once Login is completed
