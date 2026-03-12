@@ -24,6 +24,7 @@ import { useState, useEffect, use } from "react";
 
 import {
   getGoogleDistance,
+  getGoogleGasStationNearbyFromLocation,
   getGooglePlaceLongLat,
 } from "../../services/googleAPIService";
 
@@ -43,16 +44,41 @@ export default function HomeScreen({ userName }) {
   const [modalContext, setModalContext] = useState(null);
   const [sessionToken, setSessionToken] = useState(() => Crypto.randomUUID());
   const [estimate, setEstimate] = useState("");
+  const [longLat, setLongLat] = useState("");
+  const [gasStations, setGasStations] = useState([]);
 
   const onQuickCalc = async () => {
-    console.log(
-      `start type: ${typeof startLocation} ==== destination type:${typeof destination}`,
-    );
+    const findCheapest = (ar) => {
+      let val = 999;
+
+      ar.forEach((element) => {
+        const regular = element.fuelOptions.fuelPrices.filter(
+          (gasType) => gasType.type == "REGULAR_UNLEADED",
+        );
+
+        const wholePrice = parseInt(regular[0].price.units);
+        const decimal = parseInt(regular[0].price.nanos) / 1000000000;
+
+        const price = wholePrice + decimal;
+
+        if (price < val) val = price;
+      });
+
+      return val;
+    };
 
     if (!startLocation || !destination) {
       console.log("invalid start or destination");
       return;
     }
+
+    if (!longLat) {
+      console.log("long lat invalid", longLat);
+      return;
+    }
+
+    const filterStations = gasStations.filter((gas) => gas.fuelOptions);
+    const cheapest = findCheapest(filterStations);
 
     const routeDistance = await getGoogleDistance(
       startLocation.placePrediction.placeId,
@@ -64,6 +90,7 @@ export default function HomeScreen({ userName }) {
     setEstimate(() => ({
       distance: metersToMiles(distanceMeters),
       duration: secondsToMinutes(duration),
+      gasPrice: cheapest,
     }));
   };
 
@@ -76,7 +103,6 @@ export default function HomeScreen({ userName }) {
   };
 
   const onSelectVehicle = () => {
-    console.log("test");
     setModalContext(MODAL_CONTEXT.CAR_SELECT);
     setIsModalVisible(true);
   };
@@ -86,16 +112,30 @@ export default function HomeScreen({ userName }) {
     setIsModalVisible(true);
   };
 
-  useEffect(() => {
-    const longLat = async () => {
-      return await getGooglePlaceLongLat(startLocation.placePrediction.placeId);
-    };
-  }, [startLocation]);
-
   const onDestinationChange = (e) => {
     setModalContext(MODAL_CONTEXT.END_LOC);
     setIsModalVisible(true);
   };
+
+  useEffect(() => {
+    if (!startLocation) return;
+
+    const getLongLat = async () => {
+      const data = await getGooglePlaceLongLat(
+        startLocation.placePrediction.placeId,
+      );
+
+      setLongLat(data.location);
+
+      const { places } = await getGoogleGasStationNearbyFromLocation(
+        data.location,
+      );
+
+      setGasStations(places);
+    };
+
+    getLongLat();
+  }, [startLocation]);
 
   return (
     <View style={styles.container}>
@@ -105,11 +145,6 @@ export default function HomeScreen({ userName }) {
 
       <View style={styles.contentContainer}>
         <View style={styles.contents}>
-          {/* <TextInputField
-            label="Starting Location"
-            placeholder="Enter starting location"
-            handleInputChange={onStartLocationChange}
-          /> */}
           <SelectField
             label="Starting Location"
             placeholder="Enter starting location"
@@ -118,11 +153,6 @@ export default function HomeScreen({ userName }) {
             value={startLocation && startLocation.placePrediction.text.text}
           />
 
-          {/* <TextInputField
-            label="Destination"
-            placeholder="Enter destination"
-            handleInputChange={onDestinationChange}
-          /> */}
           <SelectField
             label="Destination"
             placeholder="Enter destination"
@@ -157,7 +187,13 @@ export default function HomeScreen({ userName }) {
                 </View>
                 <View style={styles.estimateRow}>
                   <Text style={styles.estimateLabel}>Estimated Cost : </Text>
-                  <Text style={styles.estimateData}>$50.00</Text>
+                  <Text style={styles.estimateData}>
+                    ${" "}
+                    {(
+                      (estimate.distance / vehicle.mpg_combined) *
+                      estimate.gasPrice
+                    ).toFixed(2)}
+                  </Text>
                 </View>
                 <View style={styles.estimateRow}>
                   <Text style={styles.estimateLabel}>ETA: </Text>
@@ -209,6 +245,7 @@ export default function HomeScreen({ userName }) {
             setVisibility={setIsModalVisible}
             sessToken={sessionToken}
             setAddress={setDestination}
+            setSessToken={setSessionToken}
           />
         )}
       </Modal>
