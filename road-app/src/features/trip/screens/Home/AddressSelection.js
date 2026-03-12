@@ -19,11 +19,16 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   getGoogleAutocomplete,
   completeGoogleAddress,
-} from "../../services/googleAutocompleteService";
+} from "../../services/googleAPIService";
 import { useState } from "react";
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 
-function AddressSelection({ setVisibility, sessToken, setAddress }) {
+function AddressSelection({
+  setVisibility,
+  sessToken,
+  setAddress,
+  setSessToken,
+}) {
   const [places, setPlaces] = useState([]);
   const closeModal = () => {
     setVisibility(false);
@@ -33,6 +38,7 @@ function AddressSelection({ setVisibility, sessToken, setAddress }) {
     await completeGoogleAddress(item.placePrediction.placeId);
 
     setAddress(item);
+    setSessToken(() => Crypto.randomUUID());
     closeModal();
   };
 

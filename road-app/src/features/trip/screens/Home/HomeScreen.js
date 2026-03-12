@@ -10,7 +10,10 @@ Date: 02-21-2026
 import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 import { useNavigation } from "@react-navigation/native";
-
+import {
+  metersToMiles,
+  secondsToMinutes,
+} from "../../../../shared/utility/utils";
 import TripDetailsScreen from "../TripDetailsScreen";
 import VehicleSelection from "./VehicleSelection";
 import AddressSelection from "./AddressSelection";
@@ -18,6 +21,11 @@ import TextInputField from "../../../../shared/component/TextInputField";
 import SelectField from "../../../../shared/component/SelectField";
 import * as Crypto from "expo-crypto";
 import { useState, useEffect, use } from "react";
+
+import {
+  getGoogleDistance,
+  getGooglePlaceLongLat,
+} from "../../services/googleAPIService";
 
 export default function HomeScreen({ userName }) {
   const MODAL_CONTEXT = {
@@ -34,12 +42,29 @@ export default function HomeScreen({ userName }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalContext, setModalContext] = useState(null);
   const [sessionToken, setSessionToken] = useState(() => Crypto.randomUUID());
+  const [estimate, setEstimate] = useState("");
 
-  console.log(sessionToken);
-  console.log(startLocation);
+  const onQuickCalc = async () => {
+    console.log(
+      `start type: ${typeof startLocation} ==== destination type:${typeof destination}`,
+    );
 
-  const onQuickCalc = () => {
-    console.log("quick save pressed");
+    if (!startLocation || !destination) {
+      console.log("invalid start or destination");
+      return;
+    }
+
+    const routeDistance = await getGoogleDistance(
+      startLocation.placePrediction.placeId,
+      destination.placePrediction.placeId,
+    );
+
+    const { distanceMeters, duration } = routeDistance.routes[0];
+
+    setEstimate(() => ({
+      distance: metersToMiles(distanceMeters),
+      duration: secondsToMinutes(duration),
+    }));
   };
 
   const onSave = () => {
@@ -57,25 +82,20 @@ export default function HomeScreen({ userName }) {
   };
 
   const onStartLocationChange = (e) => {
-    console.log("startlocation input changed");
-    // setStartLocation(e);
     setModalContext(MODAL_CONTEXT.START_LOC);
     setIsModalVisible(true);
   };
 
-  // useEffect(() => {
-  //   console.log("startlocation value:", startLocation);
-  // }, [startLocation]);
+  useEffect(() => {
+    const longLat = async () => {
+      return await getGooglePlaceLongLat(startLocation.placePrediction.placeId);
+    };
+  }, [startLocation]);
 
   const onDestinationChange = (e) => {
-    // console.log("destination input changed", e);
     setModalContext(MODAL_CONTEXT.END_LOC);
     setIsModalVisible(true);
   };
-
-  // useEffect(() => {
-  //   console.log("destination value:", destination);
-  // }, [destination]);
 
   return (
     <View style={styles.container}>
@@ -120,35 +140,40 @@ export default function HomeScreen({ userName }) {
               vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
             }
           />
-
-          <View style={styles.caclBtnContainer}>
-            <Pressable onPress={onQuickCalc}>
+          <Pressable onPress={onQuickCalc}>
+            <View style={styles.caclBtnContainer}>
               <Text style={styles.calcBtn}>Quick calculate</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.quickEstimateContainer}>
-            <View style={styles.estimateDetail}>
-              <View style={styles.estimateRow}>
-                <Text style={styles.estimateLabel}>Distance: </Text>
-                <Text style={styles.estimateData}>50 mi</Text>
-              </View>
-              <View style={styles.estimateRow}>
-                <Text style={styles.estimateLabel}>Estimated Cost : </Text>
-                <Text style={styles.estimateData}>$50.00</Text>
-              </View>
-              <View style={styles.estimateRow}>
-                <Text style={styles.estimateLabel}>ETA: </Text>
-                <Text style={styles.estimateData}>40 min</Text>
-              </View>
             </View>
+          </Pressable>
 
-            <View style={styles.saveBtnContainer}>
+          {estimate && (
+            <View style={styles.quickEstimateContainer}>
+              <View style={styles.estimateDetail}>
+                <View style={styles.estimateRow}>
+                  <Text style={styles.estimateLabel}>Distance: </Text>
+                  <Text style={styles.estimateData}>
+                    {Math.ceil(estimate.distance)} mi
+                  </Text>
+                </View>
+                <View style={styles.estimateRow}>
+                  <Text style={styles.estimateLabel}>Estimated Cost : </Text>
+                  <Text style={styles.estimateData}>$50.00</Text>
+                </View>
+                <View style={styles.estimateRow}>
+                  <Text style={styles.estimateLabel}>ETA: </Text>
+                  <Text style={styles.estimateData}>
+                    {Math.ceil(estimate.duration)} min
+                  </Text>
+                </View>
+              </View>
+
               <Pressable onPress={onSave}>
-                <Text style={styles.calcBtn}>Save</Text>
+                <View style={styles.saveBtnContainer}>
+                  <Text style={styles.calcBtn}>Save</Text>
+                </View>
               </Pressable>
             </View>
-          </View>
+          )}
         </View>
 
         <View style={styles.caclBtnContainer}>
@@ -175,6 +200,7 @@ export default function HomeScreen({ userName }) {
             setVisibility={setIsModalVisible}
             sessToken={sessionToken}
             setAddress={setStartLocation}
+            setSessToken={setSessionToken}
           />
         )}
 
