@@ -21,6 +21,7 @@ import {
   completeGoogleAddress,
 } from "../../services/googleAPIService";
 import { useState } from "react";
+import * as Crypto from "expo-crypto";
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 
 function AddressSelection({
@@ -45,10 +46,9 @@ function AddressSelection({
   // TODO: Add a timer, prevents sending request on the 4th letter. Should be sent after a second or 2 not typing.
   const onSearchTextChange = async (text) => {
     try {
-      // console.log(e.length);
-      if (text.length > 3) {
+      if (text.length > 2) {
         const result = await getGoogleAutocomplete(text, sessToken);
-        console.log("google place result", result);
+
         setPlaces(result.suggestions);
       }
     } catch (error) {

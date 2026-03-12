@@ -1,6 +1,8 @@
 /*
-Google Places Autocomplete API.
-Used in retrieving starting/destination address information, required to calculate cost/distance.
+Google API Service
+Provides all Google Maps API require for the application:
+  - Routes
+  - Places
 
 Author: Bryan Cardeno                               
 Date: 02-26-2026 
@@ -26,13 +28,14 @@ const AUTOCOMPLETE_FIELD_MASK = [
 
 export const getGoogleAutocomplete = async (userInput, sessToken) => {
   const url = `${GOOGLE_PLACES_ENDPOINT}:autocomplete`;
+  const fieldMask = AUTOCOMPLETE_FIELD_MASK.join(",");
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": API_KEY,
-        "X-Goog-FieldMask": AUTOCOMPLETE_FIELD_MASK.join(","),
+        "X-Goog-FieldMask": fieldMask,
       },
       body: JSON.stringify({
         input: userInput,
@@ -45,7 +48,6 @@ export const getGoogleAutocomplete = async (userInput, sessToken) => {
     }
 
     const result = await response.json();
-    console.log(result);
 
     return result;
   } catch (error) {
@@ -68,10 +70,6 @@ export const completeGoogleAddress = async (placeId, sessToken) => {
       },
     });
 
-    console.log(
-      "this is the response after submitting placeid",
-      response.status,
-    );
     if (!response.ok) {
       throw new Error(`Response status: ${response.status}`);
     }
@@ -112,8 +110,12 @@ const GAS_NEARBY_FIELD_MASK = [
 
 const SEARCH_RADIUS = 8000; // meters
 
-export const getGoogleGasStationNearby = async ({ longitutde, latitude }) => {
+export const getGoogleGasStationNearbyFromLocation = async ({
+  longitude: long,
+  latitude: lat,
+}) => {
   const url = `${GOOGLE_PLACES_ENDPOINT}:searchNearby`;
+  const fieldMask = GAS_NEARBY_FIELD_MASK.join(",");
 
   try {
     const response = await fetch(url, {
@@ -121,25 +123,27 @@ export const getGoogleGasStationNearby = async ({ longitutde, latitude }) => {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": API_KEY,
-        "x-Goog-FieldMask": GAS_NEARBY_FIELD_MASK.join(","),
+        "X-Goog-FieldMask": fieldMask,
       },
-      body: {
+      body: JSON.stringify({
         includedTypes: ["gas_station"],
         maxResultCount: 10,
         locationRestriction: {
           circle: {
             center: {
-              latitude: latitude,
-              longitude: longitutde,
+              latitude: lat,
+              longitude: long,
             },
             radius: SEARCH_RADIUS,
           },
         },
-      },
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`Response status: ${response.status}`);
+      throw new Error(
+        `Response status: ${response.status} \t Response: ${response}`,
+      );
     }
 
     const result = response.json();
