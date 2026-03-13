@@ -188,6 +188,8 @@ export const getGoogleDistance = async (originId, destinationId) => {
     }
 
     const result = await response.json();
+
+    console.log("routes result", result);
     return result;
   } catch (error) {
     console.log(error);

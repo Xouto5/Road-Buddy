@@ -20,7 +20,7 @@ import AddressSelection from "./AddressSelection";
 import TextInputField from "../../../../shared/component/TextInputField";
 import SelectField from "../../../../shared/component/SelectField";
 import * as Crypto from "expo-crypto";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 
 import {
   getGoogleDistance,
@@ -85,12 +85,13 @@ export default function HomeScreen({ userName }) {
       destination.placePrediction.placeId,
     );
 
-    const { distanceMeters, duration } = routeDistance.routes[0];
+    const { distanceMeters, duration, polyline } = routeDistance.routes[0];
 
     setEstimate(() => ({
       distance: metersToMiles(distanceMeters),
       duration: secondsToMinutes(duration),
       gasPrice: cheapest,
+      polylines: polyline,
     }));
   };
 
@@ -100,6 +101,11 @@ export default function HomeScreen({ userName }) {
 
   const onViewOverview = () => {
     console.log("view overview pressed");
+
+    console.log(estimate);
+
+    if (estimate.polylines)
+      navigation.navigate("Overview", { polyline: estimate.polylines });
   };
 
   const onSelectVehicle = () => {
@@ -137,6 +143,7 @@ export default function HomeScreen({ userName }) {
     getLongLat();
   }, [startLocation]);
 
+  console.log("polylines", estimate.polyline);
   return (
     <View style={styles.container}>
       <View style={styles.screenTitle}>
@@ -213,7 +220,7 @@ export default function HomeScreen({ userName }) {
         </View>
 
         <View style={styles.caclBtnContainer}>
-          <Pressable onPress={() => navigation.navigate("Overview")}>
+          <Pressable onPress={onViewOverview}>
             <Text style={styles.calcBtn}>View Overview</Text>
           </Pressable>
         </View>
