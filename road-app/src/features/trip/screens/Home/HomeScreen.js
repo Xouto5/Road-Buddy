@@ -28,6 +28,7 @@ import {
   getGooglePlaceLongLat,
 } from "../../services/googleAPIService";
 
+// TODO: Create state for all the calculated estimate values to be passed to overview.
 export default function HomeScreen({ userName }) {
   const MODAL_CONTEXT = {
     START_LOC: "start",
@@ -88,8 +89,8 @@ export default function HomeScreen({ userName }) {
     const { distanceMeters, duration, polyline } = routeDistance.routes[0];
 
     setEstimate(() => ({
-      distance: metersToMiles(distanceMeters),
-      duration: secondsToMinutes(duration),
+      distance: Math.ceil(metersToMiles(distanceMeters)),
+      duration: Math.ceil(secondsToMinutes(duration)),
       gasPrice: cheapest,
       polylines: polyline,
     }));
@@ -105,7 +106,7 @@ export default function HomeScreen({ userName }) {
     console.log(estimate);
 
     if (estimate.polylines)
-      navigation.navigate("Overview", { polyline: estimate.polylines });
+      navigation.navigate("Overview", { estDetail: estimate });
   };
 
   const onSelectVehicle = () => {
