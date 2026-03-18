@@ -25,7 +25,7 @@ const sampleTrips = [
   {
     id: "1",
     label: "Trip A",
-    date: "Dec 19, 2025",
+    date: "Feb 13, 2026",
     expanded: false,
     status: "past",
     details: [
@@ -49,7 +49,7 @@ const sampleTrips = [
   {
     id: "3",
     label: "Trip C",
-    date: "Feb 13, 2026",
+    date: "Dec 19, 2025",
     expanded: false,
     status: "past",
     details: [
