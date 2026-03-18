@@ -49,10 +49,14 @@ export default function CreateNewAccountScreen({ navigation }) {
 			behavior={Platform.OS === "ios" ? "padding" : "height"}
 			style={styles.screen}
 		>
+			<TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+				<Text style={styles.backText}>{"<"}</Text>
+			</TouchableOpacity>
+
 			{/* Header bar with icon + screen title */}
 			<View style={styles.header}>
 				<View style={styles.headerIconCell}>
-					<Ionicons name="person-outline" size={18} color="#9db2cc" />
+					<Ionicons name="person-outline" size={18} color={DARK_THEME.primaryText} />
 				</View>
 				<Text style={styles.headerTitle}>Create Account</Text>
 			</View>
@@ -163,13 +167,6 @@ export default function CreateNewAccountScreen({ navigation }) {
 					<Text style={styles.createButtonText}>Create Account</Text>
 				</TouchableOpacity>
 
-				{/* Bottom navigation action */}
-				<TouchableOpacity style={styles.emailButton} onPress={() => navigation.goBack()}>
-					<View style={styles.emailButtonContent}>
-						<Ionicons name="arrow-back" size={14} color={DARK_THEME.primaryText} />
-						<Text style={styles.emailButtonText}>Go Back</Text>
-					</View>
-				</TouchableOpacity>
 			</ScrollView>
 		</KeyboardAvoidingView>
 	);
@@ -182,24 +179,36 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: DARK_THEME.primaryBackground,
 	},
+	// Top-left back arrow, matching Login and Estimate screens
+	backButton: {
+		marginTop: 10,
+		marginBottom: 20,
+		marginLeft: 20,
+		alignSelf: "flex-start",
+	},
+	backText: {
+		color: DARK_THEME.primaryText,
+		fontSize: 28,
+		fontWeight: "bold",
+	},
 	// Top header card
 	header: {
-		marginTop: 56,
+		marginTop: 0,
 		marginHorizontal: 18,
 		borderWidth: 1,
-		borderColor: "#2d3f5a",
+		borderColor: DARK_THEME.primaryBorder,
 		borderRadius: 8,
 		height: 52,
 		flexDirection: "row",
 		alignItems: "center",
-		backgroundColor: "#17263b",
+		backgroundColor: DARK_THEME.primaryBackground,
 	},
 	// Left icon cell in the header
 	headerIconCell: {
 		width: 46,
 		height: "100%",
 		borderRightWidth: 1,
-		borderRightColor: "#2d3f5a",
+		borderRightColor: DARK_THEME.primaryBorder,
 		alignItems: "center",
 		justifyContent: "center",
 	},
@@ -221,13 +230,13 @@ const styles = StyleSheet.create({
 	input: {
 		height: 40,
 		borderWidth: 1,
-		borderColor: "#4a5b75",
+		borderColor: DARK_THEME.primaryBorder,
 		borderRadius: 6,
 		marginBottom: 12,
 		color: DARK_THEME.primaryText,
 		paddingHorizontal: 12,
 		fontSize: 14,
-		backgroundColor: "#1b2a42",
+		backgroundColor: DARK_THEME.primaryBackground,
 	},
 	// Container for dropdown field and expanded options
 	dropdownContainer: {
@@ -237,10 +246,10 @@ const styles = StyleSheet.create({
 	dropdownTrigger: {
 		height: 40,
 		borderWidth: 1,
-		borderColor: "#4a5b75",
+		borderColor: DARK_THEME.primaryBorder,
 		borderRadius: 6,
 		paddingHorizontal: 12,
-		backgroundColor: "#1b2a42",
+		backgroundColor: DARK_THEME.primaryBackground,
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
@@ -259,16 +268,16 @@ const styles = StyleSheet.create({
 	dropdownMenu: {
 		marginTop: 6,
 		borderWidth: 1,
-		borderColor: "#4a5b75",
+		borderColor: DARK_THEME.primaryBorder,
 		borderRadius: 6,
-		backgroundColor: "#21344f",
+		backgroundColor: DARK_THEME.modalBackground,
 	},
 	// Each selectable option row
 	dropdownOption: {
 		paddingHorizontal: 12,
 		paddingVertical: 10,
 		borderBottomWidth: 1,
-		borderBottomColor: "#4a5b75",
+		borderBottomColor: DARK_THEME.primaryBorder,
 	},
 	// Option text style
 	dropdownOptionText: {
@@ -282,7 +291,7 @@ const styles = StyleSheet.create({
 	// Main submit button style
 	createButton: {
 		marginTop: 6,
-		backgroundColor: "#f7f7f8",
+		backgroundColor: DARK_THEME.primaryText,
 		borderRadius: 6,
 		height: 38,
 		alignItems: "center",
@@ -290,32 +299,8 @@ const styles = StyleSheet.create({
 	},
 	// Main submit button text
 	createButtonText: {
-		color: "#0f172a",
+		color: DARK_THEME.primaryBackground,
 		fontSize: 14,
 		fontWeight: "700",
-	},
-	// Secondary action button style
-	emailButton: {
-		marginTop: 56,
-		height: 40,
-		borderRadius: 6,
-		borderWidth: 1,
-		borderColor: "#4a5b75",
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: "#1b2a42",
-	},
-	// Layout for icon + text inside bottom button
-	emailButtonContent: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 8,
-	},
-	// Secondary action button text
-	emailButtonText: {
-		color: DARK_THEME.primaryText,
-		fontSize: 14,
-		fontWeight: "600",
 	},
 });

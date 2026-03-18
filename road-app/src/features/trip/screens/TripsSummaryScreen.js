@@ -15,8 +15,10 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
+  TouchableOpacity,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context"; // Safe area handling for notches/status bars
+import { Ionicons } from "@expo/vector-icons";
+
 import { DARK_THEME } from "../../../shared/style/ColorScheme"; // Consistent dark theme styling
 
 // Sample trip with mock data
@@ -161,7 +163,7 @@ function TripSection({ title, items, onToggle }) {
 }
 
 // Main Trips Summary Screen Component
-export default function TripsSummaryScreen() {
+export default function TripsSummaryScreen({ navigation }) {
   const [trips, setTrips] = useState(sampleTrips);
 
 // Toggle function to expand/collapse trip details
@@ -178,11 +180,21 @@ export default function TripsSummaryScreen() {
   const upcomingTrips = trips.filter((trip) => trip.status === "upcoming");
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      {/* Back arrow - sits above scroll content at top of screen */}
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Text style={styles.backText}>{"<"}</Text>
+      </TouchableOpacity>
+
       {/* Scrollable container for when content exceeds screen height */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Screen Title */}
-        <Text style={styles.title}>Trips</Text>
+        {/* Header bar with icon + screen title */}
+        <View style={styles.header}>
+          <View style={styles.headerIconCell}>
+            <Ionicons name="briefcase-outline" size={18} color={DARK_THEME.primaryText} />
+          </View>
+          <Text style={styles.headerTitle}>Trip History</Text>
+        </View>
 
         {/* Past Trips Section */}
         <TripSection title="Past" items={pastTrips} onToggle={toggleTrip} />
@@ -194,7 +206,7 @@ export default function TripsSummaryScreen() {
           onToggle={toggleTrip}
         />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -208,17 +220,54 @@ const styles = StyleSheet.create({
 
   // ScrollView content padding and spacing
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: 18,
+    paddingTop: 8,
     paddingBottom: 32,
   },
 
-  // Main "Trips" title at the top of the screen
-  title: {
+  // Top-left back arrow, matching Create Account screen
+  backButton: {
+    marginTop: 10,
+    marginLeft: 18,
+    marginBottom: 4,
+    alignSelf: "flex-start",
+  },
+
+  backText: {
     color: DARK_THEME.primaryText,
     fontSize: 28,
-    fontWeight: "700",
+    fontWeight: "bold",
+  },
+
+  // Top header card matching Create Account screen pattern
+  header: {
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder,
+    borderRadius: 8,
+    height: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: DARK_THEME.primaryBackground,
+  },
+
+  // Left icon cell in the header
+  headerIconCell: {
+    width: 46,
+    height: "100%",
+    borderRightWidth: 1,
+    borderRightColor: DARK_THEME.primaryBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // Header title text
+  headerTitle: {
+    marginLeft: 16,
+    color: DARK_THEME.primaryText,
+    fontSize: 19,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
 
   // Container for each section (Past/Upcoming)
@@ -288,7 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    backgroundColor: DARK_THEME.previewOverlay,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
