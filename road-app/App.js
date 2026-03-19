@@ -11,6 +11,7 @@ import TripDetailsScreen from "./src/features/trip/screens/TripDetailsScreen";
 import ProfileSetupScreen from "./src/features/auth/screens/ProfileSetupScreen";
 import CostScreen from "./src/features/cost/screens/CostScreen";
 import EstimateScreen from "./src/features/cost/screens/EstimateScreen";
+import ResetPasswordScreen from "./src/features/auth/screens/ResetPassword";
 
 import TempMenuScreen from "./src/navigation/TempMenu"; 
 //import { performFirestoreOperations } from "./src/core/firebase/firebaseConfig"; 
@@ -32,6 +33,7 @@ export default function App() {
       <Stack.Navigator initialRouteName="TempMenu">
         <Stack.Screen name="TempMenu" component={TempMenuScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Plan" component={HomeScreen} />
