@@ -12,6 +12,7 @@ import ProfileSetupScreen from "./src/features/auth/screens/ProfileSetupScreen";
 import CreateNewAccountScreen from "./src/features/auth/screens/CreateNewAccount";
 import CostScreen from "./src/features/cost/screens/CostScreen";
 import EstimateScreen from "./src/features/cost/screens/EstimateScreen";
+import ResetPasswordScreen from "./src/features/auth/screens/ResetPassword";
 
 import TempMenuScreen from "./src/navigation/TempMenu"; 
 //import { performFirestoreOperations } from "./src/core/firebase/firebaseConfig"; 
