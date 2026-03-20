@@ -16,6 +16,11 @@ export default function TempMenuScreen() {
         />
         <Button
           style={styles.buttons}
+          title="Create New Account"
+          onPress={() => navigation.navigate("CreateAccount")}
+        />
+        <Button
+          style={styles.buttons}
           title="Home/Plan"
           onPress={() => navigation.navigate("Plan")}
         />

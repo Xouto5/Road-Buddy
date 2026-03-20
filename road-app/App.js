@@ -9,6 +9,7 @@ import HomeScreen from "./src/features/trip/screens/Home/HomeScreen";
 import TripsSummaryScreen from "./src/features/trip/screens/TripsSummaryScreen";
 import TripDetailsScreen from "./src/features/trip/screens/TripDetailsScreen";
 import ProfileSetupScreen from "./src/features/auth/screens/ProfileSetupScreen";
+import CreateNewAccountScreen from "./src/features/auth/screens/CreateNewAccount";
 import CostScreen from "./src/features/cost/screens/CostScreen";
 import EstimateScreen from "./src/features/cost/screens/EstimateScreen";
 
@@ -32,6 +33,7 @@ export default function App() {
       <Stack.Navigator initialRouteName="TempMenu">
         <Stack.Screen name="TempMenu" component={TempMenuScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="CreateAccount" component={CreateNewAccountScreen} />
         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Plan" component={HomeScreen} />
