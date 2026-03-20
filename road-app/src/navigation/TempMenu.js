@@ -16,6 +16,11 @@ export default function TempMenuScreen() {
         />
         <Button
           style={styles.buttons}
+          title="Create New Account"
+          onPress={() => navigation.navigate("CreateAccount")}
+        />
+        <Button
+          style={styles.buttons}
           title="Home/Plan"
           onPress={() => navigation.navigate("Plan")}
         />
@@ -33,6 +38,16 @@ export default function TempMenuScreen() {
           style={styles.buttons}
           title="Trips"
           onPress={() => navigation.navigate("Trips")}
+        />
+        <Button
+          style={styles.buttons}
+          title="Cost"
+          onPress={() => navigation.navigate("Cost")}
+        />
+        <Button
+          style={styles.buttons}
+          title="Estimate"
+          onPress={() => navigation.navigate("Estimate")}
         />
 
         <Text style={{ color: "#fafafa", fontSize: 25 }}>
