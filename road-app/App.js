@@ -33,6 +33,7 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="TempMenu">
         <Stack.Screen name="TempMenu" component={TempMenuScreen} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} /> 
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="CreateAccount" component={CreateNewAccountScreen} />
         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />

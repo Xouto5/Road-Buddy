@@ -73,7 +73,9 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.linkText}>Forgot your Password?</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity>
+        <TouchableOpacity
+        onPress={() => navigation.navigate("CreateAccount")}
+        >
           <Text style={styles.linkText}>Create New Account</Text>
         </TouchableOpacity>
       </View>
