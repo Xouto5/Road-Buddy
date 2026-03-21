@@ -125,7 +125,8 @@ export default function ProfileScreen() {
 
   const onLogout = () => { // TODO: Backend implement Logout functionality
     if (!hasUnsavedChanges) {
-      console.log("logout");
+      console.log("logout"); //TODO: replace with onLogout
+      navigation.navigate("Login")
       return;
     }
 
@@ -137,6 +138,7 @@ export default function ProfileScreen() {
       if (shouldSave) {
         onSaveChanges();
         console.log("logout"); //TODO: replace with onLogout
+        navigation.navigate("Login")
       }
       return;
     }
@@ -152,6 +154,7 @@ export default function ProfileScreen() {
           onPress: () => {
             discardDraftChanges();
             console.log("logout"); //TODO: replace with onLogout
+            navigation.navigate("Login")
           },
         },
         {
@@ -159,6 +162,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             await onSaveChanges();
             console.log("logout"); //TODO: replace with onLogout
+            navigation.navigate("Login")
           },
         },
       ]
