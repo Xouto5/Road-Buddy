@@ -15,11 +15,13 @@ export default function ProfileSetupScreen() {
   const handleProfileSetup = () => {
     console.log(createUser)
     console.log(createUser(email, password))
+  /*
+  const handleProfileSetup = async () => {
     console.log('Profile set up with:', name, email, password);
+    // Call the Firestore operation to save the name and email
+    await performFirestoreOperations(name, email);
   };
-
-  
-  // Colors and placement of the boxes
+  */
 
   return (
     <View style={styles.container}>
@@ -72,3 +74,4 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 });
+
