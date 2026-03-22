@@ -2,14 +2,16 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { loginUser } from '../services/authServices';
 // Set username and password of user
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    // Add login logic here
+    
+    console.log(loginUser(username, password))
     console.log('Logging in with:', username, password);
   };
 

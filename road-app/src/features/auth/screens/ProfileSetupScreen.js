@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { createUser} from '../services/authServices.js'
 
 // Set username and password of user
 export default function ProfileSetupScreen() {
@@ -12,7 +13,8 @@ export default function ProfileSetupScreen() {
 
 
   const handleProfileSetup = () => {
-    // Add profile setup logic here
+    console.log(createUser)
+    console.log(createUser(email, password))
     console.log('Profile set up with:', name, email, password);
   };
 
