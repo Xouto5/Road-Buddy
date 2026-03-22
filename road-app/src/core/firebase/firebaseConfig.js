@@ -7,8 +7,8 @@ MANUEL:
 // ======================================== */
 
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
-import { getFirestore, addDoc, collection, getDocs } from "firebase/firestore";
+import { initializeAuth, getReactNativePersistence } from "@firebase/auth/dist/rn/index.js";
+import { getFirestore } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
