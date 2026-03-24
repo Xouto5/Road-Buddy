@@ -15,6 +15,8 @@ export default function ProfileSetupScreen() {
   const handleProfileSetup = () => {
     console.log(createUser)
     console.log(createUser(email, password))
+  
+  };
   /*
   const handleProfileSetup = async () => {
     console.log('Profile set up with:', name, email, password);
