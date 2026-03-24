@@ -22,7 +22,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 // Shared dark theme colors used across app screens
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
-
+import { createUser } from "../services/authServices";
 // Temporary options for selecting a vehicle type
 const carListOptions = ["Sedan", "SUV", "Truck", "Van"];
 
@@ -41,6 +41,7 @@ export default function CreateNewAccountScreen({ navigation }) {
 	// Placeholder submit handler until auth service is connected
 	const handleCreateAccount = () => {
 		// Placeholder for account creation service integration.
+		createUser(email, password)
 		navigation.goBack();
 	};
 

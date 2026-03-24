@@ -3,6 +3,8 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getAuth } from 'firebase/auth';
 import { signOut } from 'firebase/auth';
+import { onAuthStateChanged } from "firebase/auth";
+
 const email = ""
 const password = ""
 
@@ -24,6 +26,15 @@ const password = ""
     const errorMessage = error.message;
     // ..
     });
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+        console.log(user.uid)
+        } else {
+            // User is signed out
+            // ...
+        }
+    });
 }
 
 //Logs in user through firebase, if sucessful returns 200 and saves user info to the auth instance
@@ -39,6 +50,17 @@ export function loginUser(email, password){
         const errorCode = error.code;
         const errorMessage = error.message;
       });
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+        console.log(user.uid)
+        } else {
+            // User is signed out
+            // ...
+        }
+    });
+      
+      
 }
 
 //Signs out user through firebase by resetting auth instance

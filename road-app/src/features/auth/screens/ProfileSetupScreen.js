@@ -22,6 +22,7 @@ export default function ProfileSetupScreen() {
     await performFirestoreOperations(name, email);
   };
   */
+};
 
   return (
     <View style={styles.container}>
