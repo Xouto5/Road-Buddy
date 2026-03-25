@@ -76,7 +76,7 @@ export default function CreateNewAccountScreen({ navigation }) {
 	return false;
 	}
 	
-	// Example requirement: at least 6 characters (Firebase minimum) or 12 if you want stricter
+	// requirement: at least 6 characters
 	if (password.length < 6) {
 	setError("Password must be at least 6 characters long.");
 	return false;
@@ -99,11 +99,6 @@ export default function CreateNewAccountScreen({ navigation }) {
 		try {
 		const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 		const user = userCredential.user;
-
-		// Optionally update user profile with displayName / phoneNumber etc.
-		// await updateProfile(user, { displayName: `${firstName} ${lastName}` });
-
-		// Optionally save additional user details (phone, car type) to your Firestore or Realtime DB here.
 
 		// Feedback / navigation after successful signup
 		setLoading(false);
