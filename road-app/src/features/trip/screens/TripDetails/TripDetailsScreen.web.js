@@ -8,7 +8,7 @@ Date: 03-12-2026
 
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { useState, useEffect } from "react";
-import { DARK_THEME } from "../../../shared/style/ColorScheme";
+import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 import { decode } from "@googlemaps/polyline-codec";
 import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";

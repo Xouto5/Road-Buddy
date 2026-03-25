@@ -14,7 +14,7 @@ import {
   metersToMiles,
   secondsToMinutes,
 } from "../../../../shared/utility/utils";
-import TripDetailsScreen from "../TripDetailsScreen";
+import TripDetailsScreen from "../TripDetails/TripDetailsScreen.native";
 import VehicleSelection from "./VehicleSelection";
 import AddressSelection from "./AddressSelection";
 import TextInputField from "../../../../shared/component/TextInputField";
