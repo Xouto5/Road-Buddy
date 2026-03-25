@@ -26,9 +26,9 @@ import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 // Shared dark theme colors used across app screens
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 
-
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+.[^\s@]+$/;
 
+import { createUser } from "../services/authServices";
 // Temporary options for selecting a vehicle type
 const carListOptions = ["Sedan", "SUV", "Truck", "Van"];
 

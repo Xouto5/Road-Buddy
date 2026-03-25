@@ -22,6 +22,7 @@ MANUEL:
 import React, { useState } from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from "react-native";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
+import { loginUser } from "../services/authServices";
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
@@ -72,7 +73,7 @@ export default function LoginScreen({ navigation }) {
         />
       </View>
 
-      <TouchableOpacity style={styles.loginButton}>
+      <TouchableOpacity style={styles.loginButton} onPress={() => loginUser(username, password)}>
         <Text style={styles.loginButtonText}>Login</Text>
       </TouchableOpacity>
 
