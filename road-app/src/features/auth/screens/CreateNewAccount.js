@@ -18,10 +18,16 @@ import {
 	KeyboardAvoidingView,
 	Platform,
 	ScrollView,
+	ActivityIndicator,
+	Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 // Shared dark theme colors used across app screens
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+.[^\s@]+$/;
+
 import { createUser } from "../services/authServices";
 // Temporary options for selecting a vehicle type
 const carListOptions = ["Sedan", "SUV", "Truck", "Van"];
@@ -38,11 +44,90 @@ export default function CreateNewAccountScreen({ navigation }) {
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 
+
+	// UI / validation state
+	const [error, setError] = useState("");
+	const [loading, setLoading] = useState(false);
+
+	// Basic client-side validation
+	const validate = () => {
+	if (!firstName.trim()) {
+	setError("Please enter your first name.");
+	return false;
+	}
+	if (!lastName.trim()) {
+	setError("Please enter your last name.");
+	return false;
+	}
+	if (!carList) {
+	setError("Please select a vehicle type.");
+	return false;
+	}
+	if (!phone.trim()) {
+	setError("Please enter your phone number.");
+	return false;
+	}
+	if (!email.trim() || !EMAIL_REGEX.test(email)) {
+	setError("Please enter a valid email address.");
+	return false;
+	}
+	if (!password) {
+	setError("Please enter a password.");
+	return false;
+	}
+	
+	// requirement: at least 6 characters
+	if (password.length < 6) {
+	setError("Password must be at least 6 characters long.");
+	return false;
+	}
+	if (password !== confirmPassword) {
+	setError("Passwords do not match.");
+	return false;
+	}
+	setError("");
+	return true;
+	};
+
 	// Placeholder submit handler until auth service is connected
-	const handleCreateAccount = () => {
+	const handleCreateAccount = async () => {
 		// Placeholder for account creation service integration.
-		createUser(email, password)
+		if (!validate()) return;
+
+		setLoading(true);
+		const auth = getAuth();
+		try {
+		const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+		const user = userCredential.user;
+
+		// Feedback / navigation after successful signup
+		setLoading(false);
+		Alert.alert("Account created", "Your account was created successfully.");
+		// Navigate back or to main/home screen:
 		navigation.goBack();
+		} catch (err) {
+		setLoading(false);
+		// Map common Firebase errors to readable messages
+		let message = "An error occurred while creating your account.";
+		if (err.code) {
+			switch (err.code) {
+			case "auth/email-already-in-use":
+				message = "The email address is already in use.";
+				break;
+			case "auth/invalid-email":
+				message = "The email address is invalid.";
+				break;
+			case "auth/weak-password":
+				message = "The password is too weak. Try a longer password.";
+				break;
+			default:
+				message = err.message || message;
+			}
+		} else if (err.message) {
+			message = err.message;
+		}
+		setError(message);
+		}
 	};
 
 	return (
@@ -57,7 +142,7 @@ export default function CreateNewAccountScreen({ navigation }) {
 			{/* Header bar with icon + screen title */}
 			<View style={styles.header}>
 				<View style={styles.headerIconCell}>
-					<Ionicons name="person-outline" size={18} color={DARK_THEME.primaryText} />
+				<Ionicons name="person-outline" size={18} color={DARK_THEME.primaryText} />
 				</View>
 				<Text style={styles.headerTitle}>Create Account</Text>
 			</View>
@@ -70,106 +155,114 @@ export default function CreateNewAccountScreen({ navigation }) {
 			>
 				{/* Basic profile fields */}
 				<TextInput
-					style={styles.input}
-					placeholder="First Name"
-					placeholderTextColor={DARK_THEME.placeholder}
-					value={firstName}
-					onChangeText={setFirstName}
+				style={styles.input}
+				placeholder="First Name"
+				placeholderTextColor={DARK_THEME.placeholder}
+				value={firstName}
+				onChangeText={(t) => setFirstName(t)}
 				/>
 
 				<TextInput
-					style={styles.input}
-					placeholder="Last Name"
-					placeholderTextColor={DARK_THEME.placeholder}
-					value={lastName}
-					onChangeText={setLastName}
+				style={styles.input}
+				placeholder="Last Name"
+				placeholderTextColor={DARK_THEME.placeholder}
+				value={lastName}
+				onChangeText={(t) => setLastName(t)}
 				/>
 
 				{/* Car selector dropdown */}
 				<View style={styles.dropdownContainer}>
-					<TouchableOpacity
-						style={styles.dropdownTrigger}
-						onPress={() => setIsCarDropdownOpen((prev) => !prev)}
-						activeOpacity={0.85}
-					>
-						<Text
-							style={carList ? styles.dropdownValueText : styles.dropdownPlaceholderText}
-						>
-							{carList || "Car List"}
-						</Text>
-						<Ionicons
-							name={isCarDropdownOpen ? "chevron-up" : "chevron-down"}
-							size={16}
-							color={DARK_THEME.primaryText}
-						/>
-					</TouchableOpacity>
+				<TouchableOpacity
+					style={styles.dropdownTrigger}
+					onPress={() => setIsCarDropdownOpen((prev) => !prev)}
+					activeOpacity={0.85}
+				>
+					<Text style={carList ? styles.dropdownValueText : styles.dropdownPlaceholderText}>
+					{carList || "Car List"}
+					</Text>
+					<Ionicons
+					name={isCarDropdownOpen ? "chevron-up" : "chevron-down"}
+					size={16}
+					color={DARK_THEME.primaryText}
+					/>
+				</TouchableOpacity>
 
-					{isCarDropdownOpen ? (
-						<View style={styles.dropdownMenu}>
-							{carListOptions.map((option, index) => (
-								<TouchableOpacity
-									key={option}
-									style={[
-										styles.dropdownOption,
-										index === carListOptions.length - 1 ? styles.dropdownOptionLast : null,
-									]}
-									onPress={() => {
-										setCarList(option);
-										setIsCarDropdownOpen(false);
-									}}
-								>
-									<Text style={styles.dropdownOptionText}>{option}</Text>
-								</TouchableOpacity>
-							))}
-						</View>
-					) : null}
+				{isCarDropdownOpen ? (
+					<View style={styles.dropdownMenu}>
+					{carListOptions.map((option, index) => (
+						<TouchableOpacity
+						key={option}
+						style={[
+							styles.dropdownOption,
+							index === carListOptions.length - 1 ? styles.dropdownOptionLast : null,
+						]}
+						onPress={() => {
+							setCarList(option);
+							setIsCarDropdownOpen(false);
+						}}
+						>
+						<Text style={styles.dropdownOptionText}>{option}</Text>
+						</TouchableOpacity>
+					))}
+					</View>
+				) : null}
 				</View>
 
 				{/* Contact and credential fields */}
 				<TextInput
-					style={styles.input}
-					placeholder="Phone"
-					placeholderTextColor={DARK_THEME.placeholder}
-					value={phone}
-					onChangeText={setPhone}
-					keyboardType="phone-pad"
+				style={styles.input}
+				placeholder="Phone"
+				placeholderTextColor={DARK_THEME.placeholder}
+				value={phone}
+				onChangeText={(t) => setPhone(t)}
+				keyboardType="phone-pad"
 				/>
 
 				<TextInput
-					style={styles.input}
-					placeholder="Email"
-					placeholderTextColor={DARK_THEME.placeholder}
-					value={email}
-					onChangeText={setEmail}
-					autoCapitalize="none"
-					keyboardType="email-address"
+				style={styles.input}
+				placeholder="Email"
+				placeholderTextColor={DARK_THEME.placeholder}
+				value={email}
+				onChangeText={(t) => setEmail(t)}
+				autoCapitalize="none"
+				keyboardType="email-address"
 				/>
 
 				<TextInput
-					style={styles.input}
-					placeholder="Password"
-					placeholderTextColor={DARK_THEME.placeholder}
-					value={password}
-					onChangeText={setPassword}
-					secureTextEntry
+				style={styles.input}
+				placeholder="Password"
+				placeholderTextColor={DARK_THEME.placeholder}
+				value={password}
+				onChangeText={(t) => setPassword(t)}
+				secureTextEntry
 				/>
 
 				<TextInput
-					style={styles.input}
-					placeholder="Confirm Password"
-					placeholderTextColor={DARK_THEME.placeholder}
-					value={confirmPassword}
-					onChangeText={setConfirmPassword}
-					secureTextEntry
+				style={styles.input}
+				placeholder="Confirm Password"
+				placeholderTextColor={DARK_THEME.placeholder}
+				value={confirmPassword}
+				onChangeText={(t) => setConfirmPassword(t)}
+				secureTextEntry
 				/>
+
+				{/* Error message */}
+				{error ? <Text style={styles.errorText}>{error}</Text> : null}
 
 				{/* Primary account creation action */}
-				<TouchableOpacity style={styles.createButton} onPress={handleCreateAccount}>
+				<TouchableOpacity
+				style={[styles.createButton, loading ? styles.createButtonDisabled : null]}
+				onPress={handleCreateAccount}
+				disabled={loading}
+				>
+				{loading ? (
+					<ActivityIndicator color={DARK_THEME.primaryBackground} />
+				) : (
 					<Text style={styles.createButtonText}>Create Account</Text>
+				)}
 				</TouchableOpacity>
-
 			</ScrollView>
-		</KeyboardAvoidingView>
+			</KeyboardAvoidingView>
 	);
 }
 
