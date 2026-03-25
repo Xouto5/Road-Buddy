@@ -1,6 +1,11 @@
 /* ======================================== //
 CREDITS:
 
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { loginUser } from '../services/authServices';
+// Set username and password of user
 KEITH: Login screen for RoadBuddy app. Users can enter their username and password to log in, 
        or use social login options. The screen also includes links for password recovery and account creation.
        RoadBuddy Logo is at the top. White back button is also at the top left corner of the screen to allow users 
@@ -17,11 +22,17 @@ MANUEL:
 import React, { useState } from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from "react-native";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
+import { loginUser } from "../services/authServices";
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
+  const handleLogin = () => {
+    
+    console.log(loginUser(username, password))
+    console.log('Logging in with:', username, password);
+  };
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -62,16 +73,20 @@ export default function LoginScreen({ navigation }) {
         />
       </View>
 
-      <TouchableOpacity style={styles.loginButton}>
+      <TouchableOpacity style={styles.loginButton} onPress={() => loginUser(username, password)}>
         <Text style={styles.loginButtonText}>Login</Text>
       </TouchableOpacity>
 
       <View style={styles.linksContainer}>
-        <TouchableOpacity>
-          <Text style={styles.linkText}>Forgot Password?</Text>
+        <TouchableOpacity
+         onPress={() => navigation.navigate("ResetPassword")}
+         >
+          <Text style={styles.linkText}>Forgot your Password?</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity>
+        <TouchableOpacity
+        onPress={() => navigation.navigate("CreateAccount")}
+        >
           <Text style={styles.linkText}>Create New Account</Text>
         </TouchableOpacity>
       </View>

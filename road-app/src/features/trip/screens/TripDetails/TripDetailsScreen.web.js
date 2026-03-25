@@ -8,8 +8,13 @@ Date: 03-12-2026
 
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { useState, useEffect } from "react";
+<<<<<<< HEAD:road-app/src/features/trip/screens/TripDetails/TripDetailsScreen.web.js
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 import { decode } from "@googlemaps/polyline-codec";
+=======
+import { DARK_THEME } from "../../../shared/style/ColorScheme";
+//import { decode } from "@googlemaps/polyline-codec";
+>>>>>>> master:road-app/src/features/trip/screens/TripDetailsScreen.web.js
 import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
