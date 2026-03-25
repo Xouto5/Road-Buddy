@@ -7,9 +7,10 @@ Date: 03-12-2026
 */
 
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
+import MapView, { Polyline } from "react-native-maps";
 import { useState, useEffect } from "react";
-import { DARK_THEME } from "../../../shared/style/ColorScheme";
-//import { decode } from "@googlemaps/polyline-codec";
+import { DARK_THEME } from "../../../../shared/style/ColorScheme";
+import { decode } from "@googlemaps/polyline-codec";
 import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -30,14 +31,6 @@ export default function TripDetailsScreen({ route }) {
     // Delta values are for zoom levels.
     // Need to look into it more
   });
-
-  // let MapView, Polyline;
-
-  // if (Platform.OS !== "web") {
-  //   const Maps = require("react-native-maps");
-  //   MapView = Maps.default;
-  //   Polyline = Maps.Polyline;
-  // }
 
   // used for debugging
   // const runDecode = () => {
@@ -96,17 +89,12 @@ export default function TripDetailsScreen({ route }) {
           <Fontisto name="more-v" size={30} color="#fafafa" />
         </View>
       </View>
-      {/* {Platform.OS !== "web" && (
-        <MapView style={styles.map} initialRegion={initRegion}>
-          {polylines && (
-            <Polyline
-              coordinates={polylines}
-              strokeColor="red"
-              strokeWidth={5}
-            />
-          )}
-        </MapView>
-      )} */}
+
+      <MapView style={styles.map} initialRegion={initRegion}>
+        {polylines && (
+          <Polyline coordinates={polylines} strokeColor="red" strokeWidth={5} />
+        )}
+      </MapView>
 
       <View style={styles.utilButtonsContainer}>
         <View style={styles.iconContainer}>

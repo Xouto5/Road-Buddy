@@ -7,15 +7,15 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "./src/features/trip/screens/Home/HomeScreen";
 import TripsSummaryScreen from "./src/features/trip/screens/TripsSummaryScreen";
-import TripDetailsScreen from "./src/features/trip/screens/TripDetailsScreen";
+import TripDetailsScreen from "./src/features/trip/screens/TripDetails/TripDetailsScreen";
 import ProfileSetupScreen from "./src/features/auth/screens/ProfileSetupScreen";
 import CreateNewAccountScreen from "./src/features/auth/screens/CreateNewAccount";
 import CostScreen from "./src/features/cost/screens/CostScreen";
 import EstimateScreen from "./src/features/cost/screens/EstimateScreen";
 import ResetPasswordScreen from "./src/features/auth/screens/ResetPassword";
 
-import TempMenuScreen from "./src/navigation/TempMenu"; 
-//import { performFirestoreOperations } from "./src/core/firebase/firebaseConfig"; 
+import TempMenuScreen from "./src/navigation/TempMenu";
+//import { performFirestoreOperations } from "./src/core/firebase/firebaseConfig";
 
 // Create a stack navigator instance
 const Stack = createNativeStackNavigator();
@@ -24,7 +24,7 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       // Example: Only call if specific condition
-      // await performFirestoreOperations(); 
+      // await performFirestoreOperations();
     };
     fetchData();
   }, []);
@@ -47,4 +47,3 @@ export default function App() {
     </NavigationContainer>
   );
 }
-
