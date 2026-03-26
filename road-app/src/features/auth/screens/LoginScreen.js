@@ -23,21 +23,44 @@ import React, { useState } from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from "react-native";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import { loginUser } from "../services/authServices";
+import { checkIfUserSignedIn } from "../services/authServices";
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = (username, password) => {
+    loginAsync(username, password);
     
-    console.log(loginUser(username, password))
-    console.log('Logging in with:', username, password);
   };
+
+async function loginAsync(username, password) {
+    await loginUser(username, password)
+    console.log('Logging in with:', username, password);
+    if (checkIfUserSignedIn() == false){
+      console.log(checkIfUserSignedIn())
+      console.log("yippe")
+      const popupElement = document.getElementById("my-dialog");
+      popupElement.showModal();
+
+    }else{
+      window.location.href = 'TempMenu.js';
+
+    }
+}
+
+
+
+
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
+      <dialog id="my-dialog">
+        <p>Invalid credentials, please try again!</p>
+        <button commandfor="my-dialog" command="close">Close</button>
+      </dialog>
       <TouchableOpacity 
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -73,7 +96,7 @@ export default function LoginScreen({ navigation }) {
         />
       </View>
 
-      <TouchableOpacity style={styles.loginButton} onPress={() => loginUser(username, password)}>
+      <TouchableOpacity style={styles.loginButton} onPress={() => handleLogin(username, password)}>
         <Text style={styles.loginButtonText}>Login</Text>
       </TouchableOpacity>
 
