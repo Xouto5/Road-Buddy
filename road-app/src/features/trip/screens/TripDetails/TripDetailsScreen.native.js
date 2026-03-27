@@ -185,6 +185,13 @@ const styles = StyleSheet.create({
     top: 0,
     flex: 1,
     flexDirection: "row",
+    padding: 5,
+    // borderBottomLeftRadius: 40,
+    // borderBottomRightRadius: 16,
+    // borderRadius: 50,
+    // marginHorizontal: "3%",
+    // boxSizing: "border-box",
+    // marginTop: 10,
   },
   buttonContainer: {
     // backgroundColor: "green",
