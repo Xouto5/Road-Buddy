@@ -37,27 +37,41 @@ export function createUser(email, password) {
 }
 
 //Logs in user through firebase, if sucessful returns 200 and saves user info to the auth instance
-export function loginUser(email, password) {
-  const auth = getAuth();
-  signInWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      // Signed in
-      const user = userCredential.user;
-      // ...
-    })
-    .catch((error) => {
-      const errorCode = error.code;
-      const errorMessage = error.message;
-    });
+export async function loginUser(email, password){
+    const auth = getAuth();
+    await signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        // Signed in 
+        const user = userCredential.user;
+        // ...
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+      });
 
-  //   onAuthStateChanged(auth, (user) => {
-  //     if (user) {
-  //     console.log(user.uid)
-  //     } else {
-  //         // User is signed out
-  //         // ...
-  //     }
-  // });
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+        console.log(user.uid)
+        } else {
+            // User is signed out
+            // ...
+        }
+    });
+    return true
+      
+}
+
+export function checkIfUserSignedIn(){
+    const auth = getAuth();
+    const user = auth.currentUser;
+    console.log(user)
+    if (user == null){
+        return false;
+    }
+    else{
+        return true;
+    }
 }
 
 //Signs out user through firebase by resetting auth instance
