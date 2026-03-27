@@ -41,85 +41,71 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = (username, password) => {
     loginAsync(username, password);
-    
   };
 
-async function loginAsync(username, password) {
-    await loginUser(username, password)
-    console.log('Logging in with:', username, password);
-    if (checkIfUserSignedIn() == false){
-      console.log(checkIfUserSignedIn())
-      console.log("yippe")
+  async function loginAsync(username, password) {
+    await loginUser(username, password);
+    console.log("Logging in with:", username, password);
+    if (checkIfUserSignedIn() == false) {
+      console.log(checkIfUserSignedIn());
+      console.log("yippe");
       const popupElement = document.getElementById("my-dialog");
       popupElement.showModal();
-
-    }else{
-      window.location.href = 'TempMenu.js';
-
+    } else {
+      window.location.href = "TempMenu.js";
     }
-}
-
-
-
+  }
 
   return (
     <SafeAreaView
       style={styles.safeArea}
       edges={["left", "right", "bottom", "top"]}
     >
-      <dialog id="my-dialog">
-        <p>Invalid credentials, please try again!</p>
-        <button commandfor="my-dialog" command="close">Close</button>
-      </dialog>
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={styles.backText}>{'<'}</Text>
-      </TouchableOpacity>
-
-      <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../../../assets/images/RoadBuddyLogoText.png')} 
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-        />
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={true}
-        />
-      </View>
-
-      <TouchableOpacity style={styles.loginButton} onPress={() => handleLogin(username, password)}>
-        <Text style={styles.loginButtonText}>Login</Text>
-      </TouchableOpacity>
-
-      <View style={styles.linksContainer}>
+      <KeyboardAvoidingView style={styles.container}>
+        <dialog id="my-dialog">
+          <p>Invalid credentials, please try again!</p>
+          <button commandfor="my-dialog" command="close">
+            Close
+          </button>
+        </dialog>
         <TouchableOpacity
-         onPress={() => navigation.navigate("ResetPassword")}
-         >
-          <Text style={styles.linkText}>Forgot your Password?</Text>
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backText}>{"<"}</Text>
         </TouchableOpacity>
-        
+
+        <View style={styles.logoContainer}>
+          <Image
+            source={require("../../../../assets/images/RoadBuddyLogoText.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Username"
+            placeholderTextColor={DARK_THEME.placeholder}
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor={DARK_THEME.placeholder}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={true}
+          />
+        </View>
+
         <TouchableOpacity
           style={styles.loginButton}
-          onPress={() => loginUser(username, password)}
+          onPress={() => handleLogin(username, password)}
         >
           <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
@@ -132,24 +118,39 @@ async function loginAsync(username, password) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => navigation.navigate("CreateAccount")}
+            style={styles.loginButton}
+            onPress={() => loginUser(username, password)}
           >
-            <Text style={styles.linkText}>Create New Account</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.socialContainer}>
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Login with X</Text>
+            <Text style={styles.loginButtonText}>Login</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Login with Google</Text>
-          </TouchableOpacity>
+          <View style={styles.linksContainer}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ResetPassword")}
+            >
+              <Text style={styles.linkText}>Forgot your Password?</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Login with Apple</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("CreateAccount")}
+            >
+              <Text style={styles.linkText}>Create New Account</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.socialContainer}>
+            <TouchableOpacity style={styles.socialButton}>
+              <Text style={styles.socialButtonText}>Login with X</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.socialButton}>
+              <Text style={styles.socialButtonText}>Login with Google</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.socialButton}>
+              <Text style={styles.socialButtonText}>Login with Apple</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

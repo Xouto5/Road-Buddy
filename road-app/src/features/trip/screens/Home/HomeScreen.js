@@ -28,6 +28,7 @@ import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 import {
   metersToMiles,
   secondsToMinutes,
+  calcGasCost,
 } from "../../../../shared/utility/utils";
 
 // TODO: Create state for all the calculated estimate values to be passed to overview.
@@ -104,11 +105,16 @@ export default function HomeScreen({ userName }) {
 
   const onViewOverview = () => {
     console.log("view overview pressed");
-
     console.log(estimate);
 
-    if (estimate.polylines)
-      navigation.navigate("Overview", { estDetail: estimate });
+    if (estimate.polylines) {
+      navigation.navigate("Overview", {
+        estDetail: estimate,
+        pointA: startLocation,
+        pointB: destination,
+        car: vehicle,
+      });
+    }
   };
 
   const onSelectVehicle = () => {
@@ -145,6 +151,10 @@ export default function HomeScreen({ userName }) {
 
     getLongLat();
   }, [startLocation]);
+
+  useEffect(() => {
+    if (!startLocation || !destination) return;
+  }, [startLocation, destination]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
@@ -199,10 +209,11 @@ export default function HomeScreen({ userName }) {
                     <Text style={styles.estimateLabel}>Estimated Cost : </Text>
                     <Text style={styles.estimateData}>
                       ${" "}
-                      {(
-                        (estimate.distance / vehicle.mpg_combined) *
-                        estimate.gasPrice
-                      ).toFixed(2)}
+                      {calcGasCost(
+                        estimate.distance,
+                        vehicle.mpg_combined,
+                        estimate.gasPrice,
+                      )}
                     </Text>
                   </View>
                   <View style={styles.estimateRow}>

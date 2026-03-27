@@ -29,8 +29,6 @@ import {
 } from "react-native";
 import { logOut } from "../../auth/services/authServices";
 
-import { logOut } from "../../auth/services/authServices";
-
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const inputRef = useRef(null);
@@ -132,7 +130,7 @@ export default function ProfileScreen() {
     // TODO: Backend implement Logout functionality
     if (!hasUnsavedChanges) {
       logOut();
-      navigation.navigate("Login")
+      navigation.navigate("Login");
       return;
     }
 

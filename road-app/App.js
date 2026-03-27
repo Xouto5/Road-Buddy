@@ -1,20 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { StatusBar } from "expo-status-bar";
-import LoginScreen from "./src/features/auth/screens/LoginScreen";
-import SettingsScreen from "./src/features/settings/screens/SettingsScreen";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import HomeScreen from "./src/features/trip/screens/Home/HomeScreen";
-import TripsSummaryScreen from "./src/features/trip/screens/TripsSummaryScreen";
-import TripDetailsScreen from "./src/features/trip/screens/TripDetails/TripDetailsScreen";
-import ProfileSetupScreen from "./src/features/auth/screens/ProfileSetupScreen";
-import CreateNewAccountScreen from "./src/features/auth/screens/CreateNewAccount";
-import CostScreen from "./src/features/cost/screens/CostScreen";
-import EstimateScreen from "./src/features/cost/screens/EstimateScreen";
-import ResetPasswordScreen from "./src/features/auth/screens/ResetPassword";
-import { SafeAreaView } from "react-native-safe-area-context";
-import TempMenuScreen from "./src/navigation/TempMenu";
 import BottomNav from "./src/navigation/BottomNav";
+
 import AuthStack from "./src/navigation/AuthStack";
 import { onAuthStateChanged } from "firebase/auth";
 import { getAuth } from "firebase/auth";
