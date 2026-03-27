@@ -1,10 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import LoginScreen from "./src/features/auth/screens/LoginScreen";
 import SettingsScreen from "./src/features/settings/screens/SettingsScreen";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "./src/features/trip/screens/Home/HomeScreen";
 import TripsSummaryScreen from "./src/features/trip/screens/TripsSummaryScreen";
 import TripDetailsScreen from "./src/features/trip/screens/TripDetails/TripDetailsScreen";
@@ -13,37 +12,48 @@ import CreateNewAccountScreen from "./src/features/auth/screens/CreateNewAccount
 import CostScreen from "./src/features/cost/screens/CostScreen";
 import EstimateScreen from "./src/features/cost/screens/EstimateScreen";
 import ResetPasswordScreen from "./src/features/auth/screens/ResetPassword";
-
+import { SafeAreaView } from "react-native-safe-area-context";
 import TempMenuScreen from "./src/navigation/TempMenu";
+import BottomNav from "./src/navigation/BottomNav";
+import AuthStack from "./src/navigation/AuthStack";
+import { onAuthStateChanged } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 //import { performFirestoreOperations } from "./src/core/firebase/firebaseConfig";
 
 // Create a stack navigator instance
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   useEffect(() => {
-    const fetchData = async () => {
-      // Example: Only call if specific condition
-      // await performFirestoreOperations();
-    };
-    fetchData();
+    const auth = getAuth();
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log(user.uid);
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="TempMenu">
-        <Stack.Screen name="TempMenu" component={TempMenuScreen} />
-        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} /> 
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="CreateAccount" component={CreateNewAccountScreen} />
-        <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
-        <Stack.Screen name="Plan" component={HomeScreen} />
-        <Stack.Screen name="Overview" component={TripDetailsScreen} />
-        <Stack.Screen name="Trips" component={TripsSummaryScreen} />
-        <Stack.Screen name="Cost" component={CostScreen} />
-        <Stack.Screen name="Estimate" component={EstimateScreen} />
-      </Stack.Navigator>
+      {isAuthenticated ? (
+        <Stack.Navigator>
+          <Stack.Screen
+            name="Home"
+            component={BottomNav}
+            options={{ headerShown: false }}
+          />
+        </Stack.Navigator>
+      ) : (
+        <AuthStack />
+      )}
     </NavigationContainer>
   );
 }

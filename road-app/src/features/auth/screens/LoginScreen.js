@@ -18,114 +18,133 @@ MANUEL:
 
 
 // ======================================== */
- 
+
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import { loginUser } from "../services/authServices";
 
 export default function LoginScreen({ navigation }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleLogin = () => {
-    
-    console.log(loginUser(username, password))
-    console.log('Logging in with:', username, password);
+    console.log(loginUser(username, password));
+    console.log("Logging in with:", username, password);
   };
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={["left", "right", "bottom", "top"]}
     >
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
       >
-        <Text style={styles.backText}>{'<'}</Text>
-      </TouchableOpacity>
-
-      <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../../../assets/images/RoadBuddyLogoText.png')} 
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-        />
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={true}
-        />
-      </View>
-
-      <TouchableOpacity style={styles.loginButton} onPress={() => loginUser(username, password)}>
-        <Text style={styles.loginButtonText}>Login</Text>
-      </TouchableOpacity>
-
-      <View style={styles.linksContainer}>
-        <TouchableOpacity
-         onPress={() => navigation.navigate("ResetPassword")}
-         >
-          <Text style={styles.linkText}>Forgot your Password?</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-        onPress={() => navigation.navigate("CreateAccount")}
+        {/* Commented it out since LoginScreen is the landing page when not authenticated
+        Bryan Cardeno */}
+        {/* <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
         >
-          <Text style={styles.linkText}>Create New Account</Text>
-        </TouchableOpacity>
-      </View>
+          <Text style={styles.backText}>{"<"}</Text>
+        </TouchableOpacity> */}
 
-      <View style={styles.socialContainer}>
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialButtonText}>Login with X</Text>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require("../../../../assets/images/RoadBuddyLogoText.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Username"
+            placeholderTextColor={DARK_THEME.placeholder}
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor={DARK_THEME.placeholder}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={true}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={() => loginUser(username, password)}
+        >
+          <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialButtonText}>Login with Google</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialButtonText}>Login with Apple</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+
+        <View style={styles.linksContainer}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ResetPassword")}
+          >
+            <Text style={styles.linkText}>Forgot your Password?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate("CreateAccount")}
+          >
+            <Text style={styles.linkText}>Create New Account</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.socialContainer}>
+          <TouchableOpacity style={styles.socialButton}>
+            <Text style={styles.socialButtonText}>Login with X</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.socialButton}>
+            <Text style={styles.socialButtonText}>Login with Google</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.socialButton}>
+            <Text style={styles.socialButtonText}>Login with Apple</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, 
+    flex: 1,
     backgroundColor: DARK_THEME.primaryBackground,
     paddingHorizontal: 20,
   },
   backButton: {
     marginTop: 10,
     marginBottom: 20,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   backText: {
     color: DARK_THEME.primaryText,
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   logoContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 40,
   },
   logo: {
@@ -133,7 +152,7 @@ const styles = StyleSheet.create({
     height: 190,
   },
   inputContainer: {
-    width: '100%',
+    width: "100%",
     marginBottom: 20,
   },
   input: {
@@ -147,20 +166,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   loginButton: {
-    backgroundColor: '#FFFFFF',
-    width: '100%',
+    backgroundColor: "#FFFFFF",
+    width: "100%",
     paddingVertical: 15,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 25,
   },
   loginButtonText: {
-    color: '#000000',
+    color: "#000000",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   linksContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 30,
   },
   linkText: {
@@ -169,19 +188,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   socialContainer: {
-    width: '100%',
+    width: "100%",
   },
   socialButton: {
-    backgroundColor: '#FFFFFF',
-    width: '100%',
+    backgroundColor: "#FFFFFF",
+    width: "100%",
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 12,
   },
   socialButtonText: {
-    color: '#000000',
+    color: "#000000",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+  },
+  safeArea: {
+    flex: 1,
   },
 });

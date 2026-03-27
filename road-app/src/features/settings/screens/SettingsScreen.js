@@ -13,6 +13,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Alert,
   Image,
@@ -26,6 +27,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { logOut } from "../../auth/services/authServices";
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -102,7 +104,8 @@ export default function ProfileScreen() {
     setEditingKey(null);
   };
 
-  const onSaveChanges = async () => { // TODO: Backend implement Save Button functionality
+  const onSaveChanges = async () => {
+    // TODO: Backend implement Save Button functionality
     inputRef.current?.blur?.();
     setEditingKey(null);
 
@@ -123,22 +126,24 @@ export default function ProfileScreen() {
     inputRef.current?.blur?.();
   };
 
-  const onLogout = () => { // TODO: Backend implement Logout functionality
+  const onLogout = () => {
+    // TODO: Backend implement Logout functionality
     if (!hasUnsavedChanges) {
       console.log("logout"); //TODO: replace with onLogout
-      navigation.navigate("Login")
+      // navigation.navigate("Login")
+      logOut();
       return;
     }
 
     if (Platform.OS === "web") {
       const shouldSave = window.confirm(
-        "You have unsaved changes.\n\nPress OK to save before logout, or Cancel to stay on the page."
+        "You have unsaved changes.\n\nPress OK to save before logout, or Cancel to stay on the page.",
       );
 
       if (shouldSave) {
         onSaveChanges();
         console.log("logout"); //TODO: replace with onLogout
-        navigation.navigate("Login")
+        navigation.navigate("Login");
       }
       return;
     }
@@ -154,7 +159,7 @@ export default function ProfileScreen() {
           onPress: () => {
             discardDraftChanges();
             console.log("logout"); //TODO: replace with onLogout
-            navigation.navigate("Login")
+            navigation.navigate("Login");
           },
         },
         {
@@ -162,10 +167,10 @@ export default function ProfileScreen() {
           onPress: async () => {
             await onSaveChanges();
             console.log("logout"); //TODO: replace with onLogout
-            navigation.navigate("Login")
+            navigation.navigate("Login");
           },
         },
-      ]
+      ],
     );
   };
 
@@ -194,7 +199,7 @@ export default function ProfileScreen() {
 
     if (editingCar) {
       const updatedCars = carOptions.map((car) =>
-      car.name === editingCar.name ? updatedCar : car
+        car.name === editingCar.name ? updatedCar : car,
       );
 
       setCarOptions(updatedCars);
@@ -202,7 +207,7 @@ export default function ProfileScreen() {
       if (selectedCar?.name === editingCar.name) {
         setSelectedCar(updatedCar);
       }
-      } else {
+    } else {
       setCarOptions((prev) => [...prev, updatedCar]);
       setSelectedCar(updatedCar);
       setCarModalOpen(false);
@@ -222,7 +227,7 @@ export default function ProfileScreen() {
     if (!carToDelete) return;
 
     setCarOptions((prev) =>
-      prev.filter((car) => car.name !== carToDelete.name)
+      prev.filter((car) => car.name !== carToDelete.name),
     );
 
     if (selectedCar?.name === carToDelete.name) {
@@ -246,10 +251,7 @@ export default function ProfileScreen() {
           disabled={lockThisRow}
         >
           <Text
-            style={[
-              styles.fieldText,
-              !selectedCar && styles.placeholderText,
-            ]}
+            style={[styles.fieldText, !selectedCar && styles.placeholderText]}
             numberOfLines={1}
           >
             {selectedCar
@@ -355,7 +357,10 @@ export default function ProfileScreen() {
                   />
 
                   <View style={styles.addNewActions}>
-                    <Pressable onPress={saveCarDetails} style={styles.addNewBtn}>
+                    <Pressable
+                      onPress={saveCarDetails}
+                      style={styles.addNewBtn}
+                    >
                       <Text style={styles.addNewBtnText}>Save</Text>
                     </Pressable>
 
@@ -434,7 +439,7 @@ export default function ProfileScreen() {
     placeholder,
     draft,
     setDraft,
-    keyboardType = "default"
+    keyboardType = "default",
   ) => {
     const isEditingThis = editingKey === key;
     const lockThisRow = editingKey !== null && !isEditingThis;
@@ -449,7 +454,9 @@ export default function ProfileScreen() {
             onChangeText={setDraft}
             placeholder={placeholder}
             placeholderTextColor={COLORS.placeholder}
-            autoCapitalize={key === "email" || key === "username" ? "none" : "words"}
+            autoCapitalize={
+              key === "email" || key === "username" ? "none" : "words"
+            }
             keyboardType={keyboardType}
             returnKeyType="done"
             onSubmitEditing={stopEditing}
@@ -467,7 +474,11 @@ export default function ProfileScreen() {
 
         {isEditingThis ? (
           <View style={styles.actions}>
-            <Pressable onPress={stopEditing} hitSlop={10} style={styles.actionBtn}>
+            <Pressable
+              onPress={stopEditing}
+              hitSlop={10}
+              style={styles.actionBtn}
+            >
               <Text style={styles.actionText}>Done</Text>
             </Pressable>
 
@@ -500,105 +511,112 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.safe}>
-      <View style={styles.screen}>
-        <View style={styles.topbar}>
-          <Image
+    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
+      <View style={styles.safe}>
+        <View style={styles.screen}>
+          <View style={styles.topbar}>
+            <Image
               source={require("../../../../assets/images/user-settings-icon.png")}
               style={styles.infoImage}
               resizeMode="contain"
             />
 
-          <Text style={styles.title}>Profile</Text>
+            <Text style={styles.title}>Profile</Text>
 
-          <Pressable
-            style={styles.infoBtn}
-            hitSlop={10}
-            onPress={() => navigation.navigate("AboutScreen")}
+            <Pressable
+              style={styles.infoBtn}
+              hitSlop={10}
+              onPress={() => navigation.navigate("AboutScreen")}
+            >
+              <Image
+                source={require("../../../../assets/images/info-icon.png")}
+                style={styles.infoImage}
+                resizeMode="contain"
+              />
+            </Pressable>
+          </View>
+
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
-            <Image
-              source={require("../../../../assets/images/info-icon.png")}
-              style={styles.infoImage}
-              resizeMode="contain"
-            />
-          </Pressable>
+            <ScrollView
+              contentContainerStyle={styles.content}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.form}>
+                {renderPencilRow(
+                  "username",
+                  "Username",
+                  usernameDraft,
+                  setUsernameDraft,
+                  "default",
+                )}
+
+                {renderPencilRow(
+                  "firstName",
+                  "First Name",
+                  firstNameDraft,
+                  setFirstNameDraft,
+                  "default",
+                )}
+
+                {renderPencilRow(
+                  "lastName",
+                  "Last Name",
+                  lastNameDraft,
+                  setLastNameDraft,
+                  "default",
+                )}
+
+                {renderCarDropdownRow()}
+
+                {renderPencilRow(
+                  "phone",
+                  "Phone Number",
+                  phoneDraft,
+                  setPhoneDraft,
+                  "phone-pad",
+                )}
+
+                {renderPencilRow(
+                  "email",
+                  "Email",
+                  emailDraft,
+                  setEmailDraft,
+                  "email-address",
+                )}
+
+                <Pressable
+                  style={[
+                    styles.saveBtn,
+                    !hasUnsavedChanges && styles.saveBtnDisabled,
+                  ]}
+                  onPress={onSaveChanges}
+                  disabled={!hasUnsavedChanges}
+                >
+                  <Text style={styles.saveBtnText}>Save Changes</Text>
+                </Pressable>
+
+                {hasUnsavedChanges && (
+                  <Text style={styles.unsavedText}>
+                    You have unsaved changes
+                  </Text>
+                )}
+
+                <View style={styles.bigSpacer} />
+
+                <Pressable style={styles.logoutBtn} onPress={onLogout}>
+                  <Text style={styles.logoutBtnText}>Logout</Text>
+                </Pressable>
+
+                <View style={styles.bottomPadding} />
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </View>
-
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          <ScrollView
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.form}>
-              {renderPencilRow(
-                "username",
-                "Username",
-                usernameDraft,
-                setUsernameDraft,
-                "default"
-              )}
-
-              {renderPencilRow(
-                "firstName",
-                "First Name",
-                firstNameDraft,
-                setFirstNameDraft,
-                "default"
-              )}
-
-              {renderPencilRow(
-                "lastName",
-                "Last Name",
-                lastNameDraft,
-                setLastNameDraft,
-                "default"
-              )}
-
-              {renderCarDropdownRow()}
-
-              {renderPencilRow(
-                "phone",
-                "Phone Number",
-                phoneDraft,
-                setPhoneDraft,
-                "phone-pad"
-              )}
-
-              {renderPencilRow(
-                "email",
-                "Email",
-                emailDraft,
-                setEmailDraft,
-                "email-address"
-              )}
-
-              <Pressable
-                style={[styles.saveBtn, !hasUnsavedChanges && styles.saveBtnDisabled,]}
-                onPress={onSaveChanges}
-                disabled={!hasUnsavedChanges}
-              >
-                <Text style={styles.saveBtnText}>Save Changes</Text>
-              </Pressable>
-
-              {hasUnsavedChanges && (
-                <Text style={styles.unsavedText}>You have unsaved changes</Text>
-              )}
-
-              <View style={styles.bigSpacer} />
-
-              <Pressable style={styles.logoutBtn} onPress={onLogout}>
-                <Text style={styles.logoutBtnText}>Logout</Text>
-              </Pressable>
-
-              <View style={styles.bottomPadding} />
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -962,5 +980,9 @@ const styles = StyleSheet.create({
 
   deleteText: {
     color: "#FF7A7A",
+  },
+
+  safeArea: {
+    flex: 1,
   },
 });
