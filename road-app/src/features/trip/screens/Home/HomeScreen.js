@@ -8,25 +8,27 @@ Date: 02-21-2026
 */
 
 import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
-import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 import { useNavigation } from "@react-navigation/native";
-import {
-  metersToMiles,
-  secondsToMinutes,
-} from "../../../../shared/utility/utils";
-import TripDetailsScreen from "../TripDetailsScreen";
-import VehicleSelection from "./VehicleSelection";
-import AddressSelection from "./AddressSelection";
-import TextInputField from "../../../../shared/component/TextInputField";
-import SelectField from "../../../../shared/component/SelectField";
-import * as Crypto from "expo-crypto";
 import { useState, useEffect } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import * as Crypto from "expo-crypto";
 
 import {
   getGoogleDistance,
   getGoogleGasStationNearbyFromLocation,
   getGooglePlaceLongLat,
 } from "../../services/googleAPIService";
+
+import VehicleSelection from "./VehicleSelection";
+import AddressSelection from "./AddressSelection";
+import SelectField from "../../../../shared/component/SelectField";
+
+import { DARK_THEME } from "../../../../shared/style/ColorScheme";
+
+import {
+  metersToMiles,
+  secondsToMinutes,
+} from "../../../../shared/utility/utils";
 
 // TODO: Create state for all the calculated estimate values to be passed to overview.
 export default function HomeScreen({ userName }) {
@@ -144,120 +146,121 @@ export default function HomeScreen({ userName }) {
     getLongLat();
   }, [startLocation]);
 
-  console.log("polylines", estimate.polyline);
   return (
-    <View style={styles.container}>
-      <View style={styles.screenTitle}>
-        <Text style={styles.title}>Welcome {userName || "Road Buddy"}</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
+      <View style={styles.container}>
+        <View style={styles.screenTitle}>
+          <Text style={styles.title}>Welcome {userName || "Road Buddy"}</Text>
+        </View>
 
-      <View style={styles.contentContainer}>
-        <View style={styles.contents}>
-          <SelectField
-            label="Starting Location"
-            placeholder="Enter starting location"
-            handlePress={onStartLocationChange}
-            labelBgColor={DARK_THEME.primaryBackground}
-            value={startLocation && startLocation.placePrediction.text.text}
-          />
+        <View style={styles.contentContainer}>
+          <View style={styles.contents}>
+            <SelectField
+              label="Starting Location"
+              placeholder="Enter starting location"
+              handlePress={onStartLocationChange}
+              labelBgColor={DARK_THEME.primaryBackground}
+              value={startLocation && startLocation.placePrediction.text.text}
+            />
 
-          <SelectField
-            label="Destination"
-            placeholder="Enter destination"
-            handlePress={onDestinationChange}
-            labelBgColor={DARK_THEME.primaryBackground}
-            value={destination && destination.placePrediction.text.text}
-          />
+            <SelectField
+              label="Destination"
+              placeholder="Enter destination"
+              handlePress={onDestinationChange}
+              labelBgColor={DARK_THEME.primaryBackground}
+              value={destination && destination.placePrediction.text.text}
+            />
 
-          <SelectField
-            label="Vehicle"
-            placeholder="Select a vehicle"
-            handlePress={onSelectVehicle}
-            labelBgColor={DARK_THEME.primaryBackground}
-            value={
-              vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
-            }
-          />
-          <Pressable onPress={onQuickCalc}>
-            <View style={styles.caclBtnContainer}>
-              <Text style={styles.calcBtn}>Quick calculate</Text>
-            </View>
-          </Pressable>
-
-          {estimate && (
-            <View style={styles.quickEstimateContainer}>
-              <View style={styles.estimateDetail}>
-                <View style={styles.estimateRow}>
-                  <Text style={styles.estimateLabel}>Distance: </Text>
-                  <Text style={styles.estimateData}>
-                    {Math.ceil(estimate.distance)} mi
-                  </Text>
-                </View>
-                <View style={styles.estimateRow}>
-                  <Text style={styles.estimateLabel}>Estimated Cost : </Text>
-                  <Text style={styles.estimateData}>
-                    ${" "}
-                    {(
-                      (estimate.distance / vehicle.mpg_combined) *
-                      estimate.gasPrice
-                    ).toFixed(2)}
-                  </Text>
-                </View>
-                <View style={styles.estimateRow}>
-                  <Text style={styles.estimateLabel}>ETA: </Text>
-                  <Text style={styles.estimateData}>
-                    {Math.ceil(estimate.duration)} min
-                  </Text>
-                </View>
+            <SelectField
+              label="Vehicle"
+              placeholder="Select a vehicle"
+              handlePress={onSelectVehicle}
+              labelBgColor={DARK_THEME.primaryBackground}
+              value={
+                vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+              }
+            />
+            <Pressable onPress={onQuickCalc}>
+              <View style={styles.caclBtnContainer}>
+                <Text style={styles.calcBtn}>Quick calculate</Text>
               </View>
+            </Pressable>
 
-              <Pressable onPress={onSave}>
-                <View style={styles.saveBtnContainer}>
-                  <Text style={styles.calcBtn}>Save</Text>
+            {estimate && (
+              <View style={styles.quickEstimateContainer}>
+                <View style={styles.estimateDetail}>
+                  <View style={styles.estimateRow}>
+                    <Text style={styles.estimateLabel}>Distance: </Text>
+                    <Text style={styles.estimateData}>
+                      {Math.ceil(estimate.distance)} mi
+                    </Text>
+                  </View>
+                  <View style={styles.estimateRow}>
+                    <Text style={styles.estimateLabel}>Estimated Cost : </Text>
+                    <Text style={styles.estimateData}>
+                      ${" "}
+                      {(
+                        (estimate.distance / vehicle.mpg_combined) *
+                        estimate.gasPrice
+                      ).toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.estimateRow}>
+                    <Text style={styles.estimateLabel}>ETA: </Text>
+                    <Text style={styles.estimateData}>
+                      {Math.ceil(estimate.duration)} min
+                    </Text>
+                  </View>
                 </View>
-              </Pressable>
-            </View>
+
+                <Pressable onPress={onSave}>
+                  <View style={styles.saveBtnContainer}>
+                    <Text style={styles.calcBtn}>Save</Text>
+                  </View>
+                </Pressable>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.caclBtnContainer}>
+            <Pressable onPress={onViewOverview}>
+              <Text style={styles.calcBtn}>View Overview</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <Modal
+          style={styles.modal}
+          visible={isModalVisible}
+          animationType="slide"
+        >
+          {modalContext === MODAL_CONTEXT.CAR_SELECT && (
+            <VehicleSelection
+              setVisibility={setIsModalVisible}
+              onVehicleSelect={setVehicle}
+            />
           )}
-        </View>
 
-        <View style={styles.caclBtnContainer}>
-          <Pressable onPress={onViewOverview}>
-            <Text style={styles.calcBtn}>View Overview</Text>
-          </Pressable>
-        </View>
+          {modalContext === MODAL_CONTEXT.START_LOC && (
+            <AddressSelection
+              setVisibility={setIsModalVisible}
+              sessToken={sessionToken}
+              setAddress={setStartLocation}
+              setSessToken={setSessionToken}
+            />
+          )}
+
+          {modalContext === MODAL_CONTEXT.END_LOC && (
+            <AddressSelection
+              setVisibility={setIsModalVisible}
+              sessToken={sessionToken}
+              setAddress={setDestination}
+              setSessToken={setSessionToken}
+            />
+          )}
+        </Modal>
       </View>
-
-      <Modal
-        style={styles.modal}
-        visible={isModalVisible}
-        animationType="slide"
-      >
-        {modalContext === MODAL_CONTEXT.CAR_SELECT && (
-          <VehicleSelection
-            setVisibility={setIsModalVisible}
-            onVehicleSelect={setVehicle}
-          />
-        )}
-
-        {modalContext === MODAL_CONTEXT.START_LOC && (
-          <AddressSelection
-            setVisibility={setIsModalVisible}
-            sessToken={sessionToken}
-            setAddress={setStartLocation}
-            setSessToken={setSessionToken}
-          />
-        )}
-
-        {modalContext === MODAL_CONTEXT.END_LOC && (
-          <AddressSelection
-            setVisibility={setIsModalVisible}
-            sessToken={sessionToken}
-            setAddress={setDestination}
-            setSessToken={setSessionToken}
-          />
-        )}
-      </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -345,5 +348,8 @@ const styles = StyleSheet.create({
   },
   modal: {
     // backgroundColor: DARK_THEME.modalBackground,
+  },
+  safeArea: {
+    flex: 1,
   },
 });

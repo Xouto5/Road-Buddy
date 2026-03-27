@@ -1,26 +1,38 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 
 export default function ForgotPasswordScreen({ navigation }) {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <TouchableOpacity 
+      {/* Commented out since Stack Screen comes with back screen
+	  Bryan Cardeno */}
+      {/* <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
       >
-        <Text style={styles.backText}>{'<'}</Text>
-      </TouchableOpacity>
+        <Text style={styles.backText}>{"<"}</Text>
+      </TouchableOpacity> */}
 
       <View style={styles.headerContainer}>
         <Text style={styles.title}>Forgot your Password?</Text>
         <Text style={styles.subtitle}>
-          Please enter the email associated with your account to request a password reset link.
+          Please enter the email associated with your account to request a
+          password reset link.
         </Text>
       </View>
 
@@ -39,26 +51,25 @@ export default function ForgotPasswordScreen({ navigation }) {
       <TouchableOpacity style={styles.resetButton}>
         <Text style={styles.resetButtonText}>Reset Password</Text>
       </TouchableOpacity>
-
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, 
+    flex: 1,
     backgroundColor: DARK_THEME.primaryBackground,
     paddingHorizontal: 20,
   },
   backButton: {
     marginTop: 10,
     marginBottom: 20,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   backText: {
     color: DARK_THEME.primaryText,
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   headerContainer: {
     marginBottom: 30,
@@ -68,7 +79,7 @@ const styles = StyleSheet.create({
   title: {
     color: DARK_THEME.primaryText,
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 10,
   },
   subtitle: {
@@ -79,7 +90,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   inputContainer: {
-    width: '100%',
+    width: "100%",
     marginBottom: 20,
   },
   input: {
@@ -91,15 +102,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   resetButton: {
-    backgroundColor: '#FFFFFF',
-    width: '100%',
+    backgroundColor: "#FFFFFF",
+    width: "100%",
     paddingVertical: 15,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   resetButtonText: {
-    color: '#000000',
+    color: "#000000",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

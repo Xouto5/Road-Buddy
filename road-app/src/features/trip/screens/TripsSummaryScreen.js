@@ -9,6 +9,7 @@ Date: 02-24-2026
 
 // Import necessary React hooks and React Native components
 import { useState } from "react"; // State management for expandable trips
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
@@ -119,10 +120,7 @@ function TripSection({ title, items, onToggle }) {
           return (
             <View key={item.id}>
               {/* Pressable row - tapping toggles expand/collapse */}
-              <Pressable
-                style={styles.row}
-                onPress={() => onToggle(item.id)}
-              >
+              <Pressable style={styles.row} onPress={() => onToggle(item.id)}>
                 {/* Display trip date as the primary row label */}
                 <View>
                   <Text style={styles.rowLabel}>{item.date || "Date TBD"}</Text>
@@ -166,12 +164,12 @@ function TripSection({ title, items, onToggle }) {
 export default function TripsSummaryScreen({ navigation }) {
   const [trips, setTrips] = useState(sampleTrips);
 
-// Toggle function to expand/collapse trip details
+  // Toggle function to expand/collapse trip details
   const toggleTrip = (id) => {
     setTrips((currentTrips) =>
       currentTrips.map((trip) =>
-        trip.id === id ? { ...trip, expanded: !trip.expanded } : trip
-      )
+        trip.id === id ? { ...trip, expanded: !trip.expanded } : trip,
+      ),
     );
   };
 
@@ -180,33 +178,40 @@ export default function TripsSummaryScreen({ navigation }) {
   const upcomingTrips = trips.filter((trip) => trip.status === "upcoming");
 
   return (
-    <View style={styles.container}>
-      {/* Back arrow - sits above scroll content at top of screen */}
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
+      <View style={styles.container}>
+        {/* Back arrow - sits above scroll content at top of screen */}
+        {/* Commented out since Bottom Nav is implemented Bryan Cardeno */}
+        {/* <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backText}>{"<"}</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
-      {/* Scrollable container for when content exceeds screen height */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header bar with icon + screen title */}
-        <View style={styles.header}>
-          <View style={styles.headerIconCell}>
-            <Ionicons name="briefcase-outline" size={18} color={DARK_THEME.primaryText} />
+        {/* Scrollable container for when content exceeds screen height */}
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Header bar with icon + screen title */}
+          <View style={styles.header}>
+            <View style={styles.headerIconCell}>
+              <Ionicons
+                name="briefcase-outline"
+                size={18}
+                color={DARK_THEME.primaryText}
+              />
+            </View>
+            <Text style={styles.headerTitle}>Trip History</Text>
           </View>
-          <Text style={styles.headerTitle}>Trip History</Text>
-        </View>
 
-        {/* Past Trips Section */}
-        <TripSection title="Past" items={pastTrips} onToggle={toggleTrip} />
+          {/* Past Trips Section */}
+          <TripSection title="Past" items={pastTrips} onToggle={toggleTrip} />
 
-        {/* Upcoming Trips Section */}
-        <TripSection
-          title="Upcoming"
-          items={upcomingTrips}
-          onToggle={toggleTrip}
-        />
-      </ScrollView>
-    </View>
+          {/* Upcoming Trips Section */}
+          <TripSection
+            title="Upcoming"
+            items={upcomingTrips}
+            onToggle={toggleTrip}
+          />
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -368,5 +373,9 @@ const styles = StyleSheet.create({
     color: DARK_THEME.primaryText,
     fontSize: 13,
     marginBottom: 2,
+  },
+
+  safeArea: {
+    flex: 1,
   },
 });
