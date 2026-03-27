@@ -5,7 +5,9 @@ Used in retrieving starting/destination address information, required to calcula
 Author: Bryan Cardeno                               
 Date: 02-26-2026 
 */
-
+import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
+import * as Crypto from "expo-crypto";
 import {
   View,
   StyleSheet,
@@ -15,13 +17,12 @@ import {
   FlatList,
   Pressable,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+
 import {
   getGoogleAutocomplete,
   completeGoogleAddress,
 } from "../../services/googleAPIService";
-import { useState } from "react";
-import * as Crypto from "expo-crypto";
+
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 
 function AddressSelection({
@@ -31,9 +32,8 @@ function AddressSelection({
   setSessToken,
 }) {
   const [places, setPlaces] = useState([]);
-  const closeModal = () => {
-    setVisibility(false);
-  };
+
+  const closeModal = () => setVisibility(false);
 
   const handleAddressPress = async (item) => {
     await completeGoogleAddress(item.placePrediction.placeId);
@@ -43,7 +43,18 @@ function AddressSelection({
     closeModal();
   };
 
-  // TODO: Add a timer, prevents sending request on the 4th letter. Should be sent after a second or 2 not typing.
+  const debounce = (callback, delay) => {
+    let timeoutId;
+
+    return (...args) => {
+      clearTimeout(timeoutId);
+
+      timeoutId = setTimeout(() => {
+        callback(...args);
+      }, delay);
+    };
+  };
+
   const onSearchTextChange = async (text) => {
     try {
       if (text.length > 2) {
@@ -55,6 +66,8 @@ function AddressSelection({
       console.log(error);
     }
   };
+
+  const debouncedSearchText = debounce(onSearchTextChange, 600); // 0.6 second
 
   const renderPlaces = ({ item }) => {
     return (
@@ -74,7 +87,7 @@ function AddressSelection({
           style={styles.textInput}
           placeholder="Enter address"
           placeholderTextColor={DARK_THEME.primaryText}
-          onChangeText={onSearchTextChange}
+          onChangeText={debouncedSearchText}
         />
       </View>
       <FlatList

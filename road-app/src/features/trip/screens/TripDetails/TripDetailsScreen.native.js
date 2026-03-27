@@ -6,17 +6,20 @@ Author: Bryan Cardeno
 Date: 03-12-2026
 */
 
-import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
-import MapView, { Polyline } from "react-native-maps";
+import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useState, useEffect } from "react";
-import { DARK_THEME } from "../../../../shared/style/ColorScheme";
-import { decode } from "@googlemaps/polyline-codec";
+import { useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import MapView, { Polyline } from "react-native-maps";
 import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Fontisto from "@expo/vector-icons/Fontisto";
-import { useNavigation } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
+
+import { decode } from "@googlemaps/polyline-codec";
+
+import { calcGasCost } from "../../../../shared/utility/utils";
+import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 
 export default function TripDetailsScreen({ route }) {
   const navigation = useNavigation();
@@ -51,6 +54,10 @@ export default function TripDetailsScreen({ route }) {
   useEffect(() => {
     if (!route.params) return;
 
+    const { estDetail, pointA, pointB, car } = route.params;
+
+    console.log(route.params);
+
     const decoded = decode(
       route?.params?.estDetail?.polylines?.encodedPolyline,
     );
@@ -64,6 +71,15 @@ export default function TripDetailsScreen({ route }) {
     if (decoded) {
       setPolylines(mappedDecode);
     }
+
+    setEstimate(() => ({
+      distance: estDetail.distance,
+      duration: estDetail.duration,
+      startName: pointA.placePrediction.text.text,
+      destinationName: pointB.placePrediction.text.text,
+      gasPrice: estDetail.gasPrice,
+      vehicle: car,
+    }));
 
     // TODO: CREATE STATE IN HOMESCREEN
     // const {distance: dis, duration: dur, gasPrice: gas} = route.params.estDetail;
@@ -86,13 +102,43 @@ export default function TripDetailsScreen({ route }) {
               <Ionicons name="arrow-back" size={30} color="#fafafa" />
             </Pressable>
           </View>
+
           <View style={styles.info}>
-            <Text style={styles.text}>Distance: {} mi</Text>
-            <Text style={styles.text}>Estimated Cost: $50.00</Text>
-            <Text style={styles.text}>Start: Point A</Text>
-            <Text style={styles.text}>Destination: Point B</Text>
-            <Text style={styles.text}>Time: 40 min</Text>
+            <View style={styles.textContainer}>
+              <Text style={styles.text}>Distance: {estimate?.distance} mi</Text>
+            </View>
+
+            <View style={styles.textContainer}>
+              <Text style={styles.text}>
+                Estimated Cost: $
+                {estimate &&
+                  calcGasCost(
+                    estimate.distance,
+                    estimate.vehicle.mpg_combined,
+                    estimate.gasPrice,
+                  )}
+              </Text>
+            </View>
+
+            <View style={styles.textContainer}>
+              <Text style={styles.text}>Start: </Text>
+              <ScrollView style={styles.scroll} horizontal>
+                <Text style={styles.text}>{estimate?.startName}</Text>
+              </ScrollView>
+            </View>
+
+            <View style={styles.textContainer}>
+              <Text style={styles.text}>Destination: </Text>
+              <ScrollView style={styles.scroll} horizontal>
+                <Text style={styles.text}>{estimate?.destinationName}</Text>
+              </ScrollView>
+            </View>
+
+            <View style={styles.textContainer}>
+              <Text style={styles.text}>Time: {estimate?.duration} min</Text>
+            </View>
           </View>
+
           <View style={styles.buttonContainer}>
             <Fontisto name="more-v" size={30} color="#fafafa" />
           </View>
@@ -168,5 +214,8 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  textContainer: {
+    flexDirection: "row",
   },
 });
