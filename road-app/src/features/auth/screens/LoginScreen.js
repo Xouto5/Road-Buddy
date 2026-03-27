@@ -68,12 +68,6 @@ export default function LoginScreen({ navigation }) {
             Close
           </button>
         </dialog>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backText}>{"<"}</Text>
-        </TouchableOpacity>
 
         <View style={styles.logoContainer}>
           <Image
