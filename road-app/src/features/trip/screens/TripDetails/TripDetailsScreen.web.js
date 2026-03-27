@@ -8,13 +8,8 @@ Date: 03-12-2026
 
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { useState, useEffect } from "react";
-<<<<<<< HEAD:road-app/src/features/trip/screens/TripDetails/TripDetailsScreen.web.js
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
-import { decode } from "@googlemaps/polyline-codec";
-=======
-import { DARK_THEME } from "../../../shared/style/ColorScheme";
-//import { decode } from "@googlemaps/polyline-codec";
->>>>>>> master:road-app/src/features/trip/screens/TripDetailsScreen.web.js
+// import { decode } from "@googlemaps/polyline-codec";
 import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -39,7 +34,6 @@ export default function TripDetailsScreen({ route }) {
   // let MapView, Polyline;
 
   // if (Platform.OS !== "web") {
-  //   const Maps = require("react-native-maps");
   //   MapView = Maps.default;
   //   Polyline = Maps.Polyline;
   // }
@@ -59,28 +53,28 @@ export default function TripDetailsScreen({ route }) {
   //   console.log(polylines);
   // };
 
-  useEffect(() => {
-    const decoded = decode(route.params.estDetail.polylines.encodedPolyline);
+  // useEffect(() => {
+  //   const decoded = decode(route.params.estDetail.polylines.encodedPolyline);
 
-    const mappedDecode = decoded.map((ar) => {
-      const latLong = { latitude: ar[0], longitude: ar[1] };
+  //   const mappedDecode = decoded.map((ar) => {
+  //     const latLong = { latitude: ar[0], longitude: ar[1] };
 
-      return latLong;
-    });
+  //     return latLong;
+  //   });
 
-    setPolylines(mappedDecode);
+  //   setPolylines(mappedDecode);
 
-    // TODO: CREATE STATE IN HOMESCREEN
-    // const {distance: dis, duration: dur, gasPrice: gas} = route.params.estDetail;
-    // setEstimate({
-    //   distance: dis,
-    //   duration: dur,
-    //   cost: (
-    //                   (dis/ vehicle.mpg_combined) *
-    //                   estimate.gasPrice
-    //                 ).toFixed(2)
-    // })
-  }, [route.params.estDetail]);
+  //   // TODO: CREATE STATE IN HOMESCREEN
+  //   // const {distance: dis, duration: dur, gasPrice: gas} = route.params.estDetail;
+  //   // setEstimate({
+  //   //   distance: dis,
+  //   //   duration: dur,
+  //   //   cost: (
+  //   //                   (dis/ vehicle.mpg_combined) *
+  //   //                   estimate.gasPrice
+  //   //                 ).toFixed(2)
+  //   // })
+  // }, [route.params.estDetail]);
 
   return (
     <View style={styles.container}>

@@ -16,6 +16,7 @@ import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Fontisto from "@expo/vector-icons/Fontisto";
 import { useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TripDetailsScreen({ route }) {
   const navigation = useNavigation();
@@ -48,7 +49,11 @@ export default function TripDetailsScreen({ route }) {
   // };
 
   useEffect(() => {
-    const decoded = decode(route.params.estDetail.polylines.encodedPolyline);
+    if (!route.params) return;
+
+    const decoded = decode(
+      route?.params?.estDetail?.polylines?.encodedPolyline,
+    );
 
     const mappedDecode = decoded.map((ar) => {
       const latLong = { latitude: ar[0], longitude: ar[1] };
@@ -56,7 +61,9 @@ export default function TripDetailsScreen({ route }) {
       return latLong;
     });
 
-    setPolylines(mappedDecode);
+    if (decoded) {
+      setPolylines(mappedDecode);
+    }
 
     // TODO: CREATE STATE IN HOMESCREEN
     // const {distance: dis, duration: dur, gasPrice: gas} = route.params.estDetail;
@@ -68,44 +75,50 @@ export default function TripDetailsScreen({ route }) {
     //                   estimate.gasPrice
     //                 ).toFixed(2)
     // })
-  }, [route.params.estDetail]);
+  }, [route.params]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.tripDetail}>
-        <View style={styles.buttonContainer}>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={30} color="#fafafa" />
-          </Pressable>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
+      <View style={styles.container}>
+        <View style={styles.tripDetail}>
+          <View style={styles.buttonContainer}>
+            <Pressable onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={30} color="#fafafa" />
+            </Pressable>
+          </View>
+          <View style={styles.info}>
+            <Text style={styles.text}>Distance: {} mi</Text>
+            <Text style={styles.text}>Estimated Cost: $50.00</Text>
+            <Text style={styles.text}>Start: Point A</Text>
+            <Text style={styles.text}>Destination: Point B</Text>
+            <Text style={styles.text}>Time: 40 min</Text>
+          </View>
+          <View style={styles.buttonContainer}>
+            <Fontisto name="more-v" size={30} color="#fafafa" />
+          </View>
         </View>
-        <View style={styles.info}>
-          <Text style={styles.text}>Distance: {} mi</Text>
-          <Text style={styles.text}>Estimated Cost: $50.00</Text>
-          <Text style={styles.text}>Start: Point A</Text>
-          <Text style={styles.text}>Destination: Point B</Text>
-          <Text style={styles.text}>Time: 40 min</Text>
-        </View>
-        <View style={styles.buttonContainer}>
-          <Fontisto name="more-v" size={30} color="#fafafa" />
+
+        <MapView style={styles.map} initialRegion={initRegion}>
+          {polylines && (
+            <Polyline
+              coordinates={polylines}
+              strokeColor="red"
+              strokeWidth={5}
+            />
+          )}
+        </MapView>
+
+        <View style={styles.utilButtonsContainer}>
+          <View style={styles.iconContainer}>
+            <Feather name="star" size={30} color="#fafafa" />
+          </View>
+
+          <View style={styles.iconContainer}>
+            <AntDesign name="car" size={30} color="#fafafa" />
+          </View>
         </View>
       </View>
-
-      <MapView style={styles.map} initialRegion={initRegion}>
-        {polylines && (
-          <Polyline coordinates={polylines} strokeColor="red" strokeWidth={5} />
-        )}
-      </MapView>
-
-      <View style={styles.utilButtonsContainer}>
-        <View style={styles.iconContainer}>
-          <Feather name="star" size={30} color="#fafafa" />
-        </View>
-
-        <View style={styles.iconContainer}>
-          <AntDesign name="car" size={30} color="#fafafa" />
-        </View>
-      </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -152,5 +165,8 @@ const styles = StyleSheet.create({
   },
   text: {
     color: "#fafafa",
+  },
+  safeArea: {
+    flex: 1,
   },
 });

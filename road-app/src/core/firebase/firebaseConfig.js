@@ -7,8 +7,8 @@ MANUEL:
 // ======================================== */
 
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { initializeAuth} from "firebase/auth";
-import { getReactNativePersistence } from '@firebase/auth/dist/rn/index.js';
+import { initializeAuth } from "firebase/auth";
+import { getReactNativePersistence } from "@firebase/auth/dist/rn/index.js";
 import { getFirestore } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -34,20 +34,18 @@ export const auth = initializeAuth(app, {
 export const performFirestoreOperations = async (name, email) => {
   try {
     const docRef = await addDoc(collection(db, "users"), {
-      name: name,  // Save the name
+      name: name, // Save the name
       email: email, // Save the email
     });
     console.log("Document written with ID: ", docRef.id);
-    
+
     const querySnapshot = await getDocs(collection(db, "users"));
     querySnapshot.forEach((doc) => {
       console.log(`${doc.id} => ${doc.data()}`);
     });
-
   } catch (e) {
     console.error("Error processing Firestore operations: ", e);
   }
-
 
   /* Testing for firestore operations
   try {
@@ -78,4 +76,3 @@ export const performFirestoreOperations = async (name, email) => {
 };
 
 export default app;
-
