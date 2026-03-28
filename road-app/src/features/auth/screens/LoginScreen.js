@@ -62,12 +62,13 @@ export default function LoginScreen({ navigation }) {
       edges={["left", "right", "bottom", "top"]}
     >
       <KeyboardAvoidingView style={styles.container}>
-        <dialog id="my-dialog">
+        {/* Please replace this section */}
+        {/* <dialog id="my-dialog">
           <p>Invalid credentials, please try again!</p>
           <button commandfor="my-dialog" command="close">
             Close
           </button>
-        </dialog>
+        </dialog> */}
 
         <View style={styles.logoContainer}>
           <Image
