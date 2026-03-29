@@ -10,11 +10,17 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import LoginScreen from "../features/auth/screens/LoginScreen";
 import ForgotPasswordScreen from "../features/auth/screens/ResetPassword";
 import CreateNewAccountScreen from "../features/auth/screens/CreateNewAccount";
+import WelcomeScreen from "../features/auth/screens/WelcomeScreen";
 
 export default function AuthStack() {
   const Stack = createNativeStackNavigator();
   return (
     <Stack.Navigator>
+      <Stack.Screen 
+        name="Welcome" 
+        component={WelcomeScreen} 
+        options={{ headerShown: false }} 
+      />
       <Stack.Screen
         name="Login"
         component={LoginScreen}
