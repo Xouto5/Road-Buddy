@@ -37,6 +37,8 @@ export default function TripResults({ route, navigation }) {
     totalCost = "0.00",
   } = route.params ?? {};
 
+  const gasPriceNumber = parseFloat(String(gasPrice || "").replace(/[^0-9.]/g, ""));
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -63,7 +65,7 @@ export default function TripResults({ route, navigation }) {
           {/* Display Gas price used and include selected type (Regular, Premium, Diesel). */}
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Gas price ({fuelType})</Text>
-            <Text style={styles.rowValue}>${gasPrice ? parseFloat(gasPrice).toFixed(2) : "0.00"} / gal</Text>
+            <Text style={styles.rowValue}>${!isNaN(gasPriceNumber) ? gasPriceNumber.toFixed(2) : "0.00"} / gal</Text>
           </View>
           {/* Display MPG used for calculation. */}
           <View style={styles.row}>
