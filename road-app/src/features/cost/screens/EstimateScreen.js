@@ -46,7 +46,6 @@ export default function EstimateScreen({ navigation, route }) {
   const [validationErrors, setValidationErrors] = useState({});
 
   // Repopulate fields when returning from TripResults via Edit Trip
-  // When returning via Edit Trip, repopulate all fields with previous values (so they don't start over!)
   useEffect(() => {
     const p = route?.params;
     if (!p) return;
@@ -79,6 +78,7 @@ export default function EstimateScreen({ navigation, route }) {
       } else {
         setStartLocation(`${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`);
       }
+      setValidationErrors((e) => ({ ...e, startLocation: undefined }));
     } catch (err) {
       setLocationError("Could not retrieve location. Please try again.");
     } finally {
@@ -87,23 +87,57 @@ export default function EstimateScreen({ navigation, route }) {
   };
 
   const handleUseLocalPrice = async () => {
-    // Gas price API not yet integrated — placeholder
-    console.log("Use local price pressed");
+    try {
+      setGasPriceLoading(true);
+      // Placeholder until API integration: treat missing local price as unavailable.
+      const localPrice = null;
+
+      if (localPrice === null || localPrice === undefined || Number(localPrice) <= 0) {
+        setValidationErrors((e) => ({
+          ...e,
+          gasPrice: "Local price is not available right now. Enter gas price manually.",
+        }));
+        return;
+      }
+
+      setGasPrice(`$${Number(localPrice).toFixed(2)}`);
+      setValidationErrors((e) => ({ ...e, gasPrice: undefined }));
+    } finally {
+      setGasPriceLoading(false);
+    }
+  };
+
+  const normalizeGasPriceInput = (value) => {
+    const cleaned = (value || "").replace(/[^0-9.]/g, "");
+    const [whole = "", ...rest] = cleaned.split(".");
+    const normalized = rest.length > 0 ? `${whole}.${rest.join("")}` : whole;
+    return normalized ? `$${normalized}` : "";
+  };
+
+  const parseGasPriceValue = (value) => {
+    const numeric = (value || "").replace(/[^0-9.]/g, "");
+    return parseFloat(numeric);
+  };
+
+  const validateStartLocation = (value) => {
+    if (!value || !value.trim()) return "Start location is required.";
+    return undefined;
   };
 
   const handleRecalculate = () => {
     const errors = {};
+    const gasPriceNumber = parseGasPriceValue(gasPrice);
+    const startLocationError = validateStartLocation(startLocation);
+    if (startLocationError) errors.startLocation = startLocationError;
     if (!destination.trim()) errors.destination = "Destination is required.";
     if (!mpg.trim() || isNaN(parseFloat(mpg)) || parseFloat(mpg) <= 0)
       errors.mpg = "Enter a valid MPG.";
-    if (!gasPrice.trim() || isNaN(parseFloat(gasPrice)) || parseFloat(gasPrice) <= 0)
+    if (!gasPrice.trim() || isNaN(gasPriceNumber) || gasPriceNumber <= 0)
       errors.gasPrice = "Enter a valid gas price.";
 
     setValidationErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    // When navigating to Results screen, pass all input values.
-    // Include start location, destination, MPG, gas type, and gas price.
     navigation.navigate("TripResults", {
       startLocation,
       destination,
@@ -144,11 +178,19 @@ export default function EstimateScreen({ navigation, route }) {
             <Text style={styles.label}>Start location</Text>
             <View style={styles.locationRow}>
               <TextInput
-                style={[styles.input, styles.locationInput]}
+                style={[styles.input, styles.locationInput, validationErrors.startLocation && styles.inputError]}
                 placeholder="e.g., New York, NY"
                 placeholderTextColor={DARK_THEME.placeholder}
                 value={startLocation}
-                onChangeText={setStartLocation}
+                onChangeText={(v) => {
+                  setStartLocation(v);
+                  setLocationError("");
+                  setValidationErrors((e) => ({ ...e, startLocation: undefined }));
+                }}
+                onBlur={() => {
+                  const startLocationError = validateStartLocation(startLocation);
+                  setValidationErrors((e) => ({ ...e, startLocation: startLocationError }));
+                }}
               />
               {/* Include "Use my location" button to the right of the input field. */}
               {/* TODO: When pressed, request location permission and autofill using GPS. */}
@@ -163,13 +205,20 @@ export default function EstimateScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
             {locationError ? (
-              <Text style={styles.locationError}>{locationError}</Text>
+              <Text style={styles.fieldError}>{locationError}</Text>
+            ) : null}
+            {validationErrors.startLocation ? (
+              <Text style={styles.fieldError}>{validationErrors.startLocation}</Text>
             ) : null}
 
             {/* Destination input labeled "Destination" below start location. */}
             <Text style={styles.label}>Destination</Text>
             <TextInput
-              style={[styles.input, validationErrors.destination && styles.inputError]}
+              style={[
+                styles.input,
+                validationErrors.destination && styles.inputError,
+                validationErrors.destination && styles.destinationInputErrorSpacing,
+              ]}
               placeholder="e.g., Los Angeles, CA"
               placeholderTextColor={DARK_THEME.placeholder}
               value={destination}
@@ -231,13 +280,16 @@ export default function EstimateScreen({ navigation, route }) {
               {/* If user manually edits the gas price, it should override autofill! */}
               <TextInput
                 style={[styles.input, styles.locationInput, validationErrors.gasPrice && styles.inputError]}
-                placeholder="e.g., 4.25"
+                placeholder="e.g., $4.25"
                 placeholderTextColor={DARK_THEME.placeholder}
                 value={gasPrice}
-                onChangeText={(v) => { setGasPrice(v); setValidationErrors((e) => ({ ...e, gasPrice: undefined })); }}
+                onChangeText={(v) => {
+                  setGasPrice(normalizeGasPriceInput(v));
+                  setValidationErrors((e) => ({ ...e, gasPrice: undefined }));
+                }}
                 onBlur={() => {
-                  const n = parseFloat(gasPrice);
-                  if (!isNaN(n) && n > 0) setGasPrice(n.toFixed(2));
+                  const n = parseGasPriceValue(gasPrice);
+                  if (!isNaN(n) && n > 0) setGasPrice(`$${n.toFixed(2)}`);
                 }}
                 keyboardType="numeric"
               />
@@ -405,13 +457,16 @@ const styles = StyleSheet.create({
     marginTop: -10,
   },
   fieldError: {
-    color: DARK_THEME.primaryBorder,
+    color: "#EF4444",
     fontSize: 13,
-    marginTop: -16,
+    marginTop: 6,
     marginBottom: 12,
   },
   inputError: {
-    borderColor: DARK_THEME.primaryBorder,
+    borderColor: "#EF4444",
+  },
+  destinationInputErrorSpacing: {
+    marginBottom: 8,
   },
   fuelTypeRow: {
     flexDirection: "row",
