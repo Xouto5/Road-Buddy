@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import BottomNav from "./src/navigation/BottomNav";
+import TripResults from "./src/features/cost/screens/TripResults";
 
 import AuthStack from "./src/navigation/AuthStack";
 import { onAuthStateChanged } from "firebase/auth";
@@ -36,6 +37,11 @@ export default function App() {
           <Stack.Screen
             name="Home"
             component={BottomNav}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="TripResults"
+            component={TripResults}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>
