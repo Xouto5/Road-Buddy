@@ -90,7 +90,13 @@ export default function TripResults({ route, navigation }) {
             {/* Modal should be dismissible by tapping outside or pressing a close button. */}
             <TouchableOpacity
               style={[styles.primaryButton, { flex: 1 }]}
-              onPress={() => setModalVisible(true)}
+              onPress={() => {
+
+                setModalVisible(true);
+                console.log("Save Button Pressed!");  // <-- add functionality here for save button.
+
+                }
+              }
             >
               <Text style={styles.primaryButtonText}>Save Trip</Text>
             </TouchableOpacity>
