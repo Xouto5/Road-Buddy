@@ -7,14 +7,16 @@ Date: 03-12-2026
 */
 
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Polyline } from "react-native-maps";
 import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Fontisto from "@expo/vector-icons/Fontisto";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 
 import { decode } from "@googlemaps/polyline-codec";
 
@@ -36,20 +38,11 @@ export default function TripDetailsScreen({ route }) {
     // Need to look into it more
   });
 
-  // used for debugging
-  // const runDecode = () => {
-  //   console.log(polylines);
+  const bottomSheetRef = useRef(null);
 
-  //   const mappedDecode = polylines.map((ar) => {
-  //     const latLong = { latitude: ar[0], longitude: ar[1] };
-
-  //     return latLong;
-  //   });
-
-  //   setPolylines(mappedDecode);
-
-  //   console.log(polylines);
-  // };
+  const handleSheetChanges = useCallback((index) => {
+    // console.log("handle sheet changes", index);
+  }, []);
 
   useEffect(() => {
     if (!route.params) return;
@@ -163,6 +156,33 @@ export default function TripDetailsScreen({ route }) {
             <AntDesign name="car" size={30} color="#fafafa" />
           </View>
         </View>
+
+        <BottomSheet
+          ref={bottomSheetRef}
+          snapPoints={["35%"]}
+          index={0}
+          backgroundStyle={styles.bottomSheet}
+        >
+          <BottomSheetView style={styles.bottomSheetContent}>
+            <Pressable>
+              <View style={styles.bottomSheetBtn}>
+                <Text style={styles.calcBtn}>Add Stop</Text>
+              </View>
+            </Pressable>
+
+            <Pressable>
+              <View style={styles.bottomSheetBtn}>
+                <Text style={styles.calcBtn}>Save Trip</Text>
+              </View>
+            </Pressable>
+
+            <Pressable>
+              <View style={styles.bottomSheetBtn}>
+                <Text style={styles.calcBtn}>Discard Trip</Text>
+              </View>
+            </Pressable>
+          </BottomSheetView>
+        </BottomSheet>
       </View>
     </SafeAreaView>
   );
@@ -174,7 +194,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   map: {
-    width: "100%",
+    // ...StyleSheet.absoluteFillObject,
     height: "100%",
   },
   tripDetail: {
@@ -212,7 +232,7 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   iconContainer: {
-    backgroundColor: "rgba(125,125,125, 0.9)",
+    // backgroundColor: "rgba(125,125,125, 0.9)",
     padding: 6,
     borderRadius: 50,
   },
@@ -224,5 +244,27 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flexDirection: "row",
+  },
+  bottomSheetContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    flex: 1,
+    gap: 20,
+  },
+  bottomSheet: {
+    backgroundColor: "rgba(125,125,125, 0.95)",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.1)",
+  },
+  bottomSheetBtn: {
+    height: 50,
+    borderWidth: 0,
+    backgroundColor: "#e4e4e4",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 10,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
   },
 });
