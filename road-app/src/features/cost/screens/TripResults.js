@@ -1,3 +1,12 @@
+/* ======================================== //
+CREDITS:
+BRIAN:  Created Trips Results sub-screen, added navigation from 
+        Estimate screen, added Save Trip modal.
+  
+        Date completed: 04/26/2026
+
+// ======================================== */
+
 import React, { useState } from "react";
 import {
   View,
@@ -102,7 +111,7 @@ export default function TripResults({ route, navigation }) {
               onPress={() =>
                 navigation.navigate("Home", {
                   screen: "Estimate",
-                  params: { startLocation, destination, vehicle, mpg, gasPrice, fuelType },
+                  params: { startLocation, destination, vehicle, mpg, gasPrice, fuelType, distance },
                 })
               }
             >
