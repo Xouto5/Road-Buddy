@@ -326,6 +326,7 @@ export default function EstimateScreen({ navigation, route }) {
       });
 
       const distance = directionsData.distanceMiles;
+      const duration = directionsData.durationMinutes;
       const mpgNumber = parseFloat(mpg);
       
       // Calculate gallons, cost per mile, and total cost
@@ -346,6 +347,8 @@ export default function EstimateScreen({ navigation, route }) {
         gasPrice,
         fuelType,
         distance: distance.toFixed(2),
+        duration: Number.isFinite(duration) ? Math.ceil(duration) : 0,
+        overviewPolyline: directionsData.polyline || "",
         gallons: gallonsDisplay,
         costPerMile: costPerMileDisplay,
         totalCost: totalCostDisplay,
