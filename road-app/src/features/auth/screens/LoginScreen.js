@@ -19,7 +19,7 @@ MANUEL:
 
 // ======================================== */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -30,46 +30,92 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
+
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
+
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
-import { loginUser } from "../services/authServices";
-import { checkIfUserSignedIn } from "../services/authServices";
+import {
+  loginUser,
+  observeAuthState,
+  handleGoogleAuth,
+} from "../services/authServices";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = (username, password) => {
-    loginAsync(username, password);
+  // SESSION PERSISTENCE
+  useEffect(() => {
+    let isActive = true;
+
+    const unsub = observeAuthState((user) => {
+      if (user && isActive) {
+        navigation.replace("TempMenu");
+      }
+    });
+
+    return () => {
+      isActive = false;
+      unsub();
+    };
+  }, []);
+
+  // GOOGLE LOGIN
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    expoClientId: "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
+    iosClientId: "YOUR_IOS_CLIENT_ID",
+    androidClientId: "YOUR_ANDROID_CLIENT_ID",
+    webClientId: "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
+  });
+
+  useEffect(() => {
+    const handleGoogleLogin = async () => {
+      if (response?.type === "success") {
+        const idToken = response.authentication?.idToken;
+        const accessToken = response.authentication?.accessToken;
+
+        const result = await handleGoogleAuth(idToken, accessToken);
+
+        if (!result.success) {
+          Alert.alert("Login Failed", result.error);
+        }
+      }
+    };
+
+    handleGoogleLogin();
+  }, [response]);
+
+  // EMAIL LOGIN
+  const handleEmailLogin = async () => {
+    const email = username.trim();
+
+    if (!email || !password) {
+      Alert.alert("Missing Fields", "Please enter email and password.");
+      return;
+    }
+
+    const result = await loginUser(email, password);
+
+    if (!result.success) {
+      Alert.alert("Login Failed", result.error);
+      return;
+    }
+
+    navigation.replace("TempMenu");
   };
 
-  async function loginAsync(username, password) {
-    await loginUser(username, password);
-    console.log("Logging in with:", username, password);
-    if (checkIfUserSignedIn() == false) {
-      console.log(checkIfUserSignedIn());
-      console.log("yippe");
-      const popupElement = document.getElementById("my-dialog");
-      popupElement.showModal();
-    } else {
-      window.location.href = "TempMenu.js";
-    }
-  }
-
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={["left", "right", "bottom", "top"]}
-    >
-      <KeyboardAvoidingView style={styles.container}>
-        {/* Please replace this section */}
-        {/* <dialog id="my-dialog">
-          <p>Invalid credentials, please try again!</p>
-          <button commandfor="my-dialog" command="close">
-            Close
-          </button>
-        </dialog> */}
-
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        
         <View style={styles.logoContainer}>
           <Image
             source={require("../../../../assets/images/RoadBuddyLogoText.png")}
@@ -78,10 +124,11 @@ export default function LoginScreen({ navigation }) {
           />
         </View>
 
+        
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Username"
+            placeholder="Email"
             placeholderTextColor={DARK_THEME.placeholder}
             value={username}
             onChangeText={setUsername}
@@ -94,46 +141,32 @@ export default function LoginScreen({ navigation }) {
             placeholderTextColor={DARK_THEME.placeholder}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry={true}
+            secureTextEntry
           />
         </View>
 
-        <View style={styles.linksContainer}>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => loginUser(username, password)}
-          >
-            <Text style={styles.loginButtonText}>Login</Text>
-          </TouchableOpacity>
+        {/* EMAIL LOGIN */}
+        <TouchableOpacity style={styles.loginButton} onPress={handleEmailLogin}>
+          <Text style={styles.loginButtonText}>Login</Text>
+        </TouchableOpacity>
 
-          <View style={styles.linksContainer}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate("ResetPassword")}
-            >
-              <Text style={styles.linkText}>Forgot your Password?</Text>
-            </TouchableOpacity>
+        {/* GOOGLE LOGIN */}
+        <TouchableOpacity
+          style={[styles.socialButton, !request && { opacity: 0.5 }]}
+          disabled={!request}
+          onPress={() => promptAsync()}
+        >
+          <Text style={styles.socialButtonText}>Login with Google</Text>
+        </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => navigation.navigate("CreateAccount")}
-            >
-              <Text style={styles.linkText}>Create New Account</Text>
-            </TouchableOpacity>
-          </View>
+        {/* PLACEHOLDERS */}
+        <TouchableOpacity style={styles.socialButton}>
+          <Text style={styles.socialButtonText}>Login with X</Text>
+        </TouchableOpacity>
 
-          <View style={styles.socialContainer}>
-            <TouchableOpacity style={styles.socialButton}>
-              <Text style={styles.socialButtonText}>Login with X</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.socialButton}>
-              <Text style={styles.socialButtonText}>Login with Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.socialButton}>
-              <Text style={styles.socialButtonText}>Login with Apple</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <TouchableOpacity style={styles.socialButton}>
+          <Text style={styles.socialButtonText}>Login with Apple</Text>
+        </TouchableOpacity>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -144,16 +177,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DARK_THEME.primaryBackground,
     paddingHorizontal: 20,
-  },
-  backButton: {
-    marginTop: 10,
-    marginBottom: 20,
-    alignSelf: "flex-start",
-  },
-  backText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 28,
-    fontWeight: "bold",
   },
   logoContainer: {
     alignItems: "center",
@@ -169,7 +192,6 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-
     borderColor: DARK_THEME.primaryBorder,
     borderRadius: 8,
     padding: 16,
@@ -178,40 +200,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   loginButton: {
-    backgroundColor: "#FFFFFF",
-    width: "100%",
+    backgroundColor: "#fff",
     paddingVertical: 15,
     borderRadius: 8,
     alignItems: "center",
-    marginBottom: 25,
+    marginBottom: 20,
   },
   loginButtonText: {
-    color: "#000000",
+    color: "#000",
     fontSize: 18,
     fontWeight: "bold",
   },
-  linksContainer: {
-    alignItems: "center",
-    marginBottom: 30,
-  },
-  linkText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  socialContainer: {
-    width: "100%",
-  },
   socialButton: {
-    backgroundColor: "#FFFFFF",
-    width: "100%",
+    backgroundColor: "#fff",
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
     marginBottom: 12,
   },
   socialButtonText: {
-    color: "#000000",
+    color: "#000",
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -219,3 +227,5 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+

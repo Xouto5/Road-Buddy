@@ -1,85 +1,109 @@
 import { auth } from "../../../core/firebase/firebaseConfig";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { getAuth } from "firebase/auth";
-import { signOut } from "firebase/auth";
-import { onAuthStateChanged } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithCredential,
+  linkWithCredential,
+} from "firebase/auth";
 
-const email = "";
-const password = "";
+// SESSION PERSISTENCE
 
-//Sayf Aldayafleh
-
-//Creates user through firebase, must be valid email and password must be 12 characters long
-//TODO - Set and discuss password requirements
-export function createUser(email, password) {
-  const auth = getAuth();
-  createUserWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      // Signed up
-      const user = userCredential.user;
-      // ...
-    })
-    .catch((error) => {
-      const errorCode = error.code;
-      const errorMessage = error.message;
-      // ..
-    });
-
-  // onAuthStateChanged(auth, (user) => {
-  //     if (user) {
-  //     console.log(user.uid)
-  //     } else {
-  //         // User is signed out
-  //         // ...
-  //     }
-  // });
+export function observeAuthState(callback) {
+  return onAuthStateChanged(auth, (user) => {
+    callback(user);
+  });
 }
 
-//Logs in user through firebase, if sucessful returns 200 and saves user info to the auth instance
-export async function loginUser(email, password) {
-  const auth = getAuth();
-  await signInWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      // Signed in
-      const user = userCredential.user;
-      // ...
-    })
-    .catch((error) => {
-      const errorCode = error.code;
-      const errorMessage = error.message;
-    });
+// EMAIL SIGN UP
 
-  //   onAuthStateChanged(auth, (user) => {
-  //     if (user) {
-  //     console.log(user.uid)
-  //     } else {
-  //         // User is signed out
-  //         // ...
-  //     }
-  // });
-  return true;
-}
-
-export function checkIfUserSignedIn() {
-  const auth = getAuth();
-  const user = auth.currentUser;
-  console.log(user);
-  if (user == null) {
-    return false;
-  } else {
-    return true;
+export async function createUser(email, password) {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    return { success: true, user: result.user };
+  } catch (error) {
+    return { success: false, error: formatError(error) };
   }
 }
 
-//Signs out user through firebase by resetting auth instance
-export function logOut() {
-  const auth = getAuth();
-  signOut(auth)
-    .then(() => {
-      // Sign-out successful.
-    })
-    .catch((error) => {
-      // An error happened.
-    });
+// EMAIL LOGIN
+
+export async function loginUser(email, password) {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return { success: true, user: result.user };
+  } catch (error) {
+    return { success: false, error: formatError(error) };
+  }
+}
+
+// GOOGLE LOGIN
+export async function handleGoogleAuth(idToken, accessToken) {
+  try {
+    const credential = GoogleAuthProvider.credential(idToken, accessToken);
+
+    const result = await signInWithCredential(auth, credential);
+
+    return { success: true, user: result.user };
+  } catch (error) {
+    return { success: false, error: formatError(error) };
+  }
+}
+
+// link Google to existing account
+
+export async function linkGoogleAccount(idToken, accessToken) {
+  try {
+    if (!auth.currentUser) {
+      throw new Error("No logged-in user to link account.");
+    }
+
+    const credential = GoogleAuthProvider.credential(idToken, accessToken);
+
+    const result = await linkWithCredential(auth.currentUser, credential);
+
+    return { success: true, user: result.user };
+  } catch (error) {
+    return { success: false, error: formatError(error) };
+  }
+}
+
+// LOGOUT
+export async function logOut() {
+  try {
+    await signOut(auth);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: formatError(error) };
+  }
+}
+
+// ERROR HANDLER
+function formatError(error) {
+  const code = error?.code;
+
+  switch (code) {
+    case "auth/invalid-email":
+      return "Invalid email format.";
+    case "auth/user-not-found":
+      return "No account found.";
+    case "auth/wrong-password":
+      return "Incorrect password.";
+    case "auth/email-already-in-use":
+      return "Account already exists.";
+    case "auth/network-request-failed":
+      return "Network error. Try again.";
+    case "auth/invalid-credential":
+      return "Invalid login credentials.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Try again later.";
+    case "auth/user-disabled":
+      return "This account has been disabled.";
+    case "auth/popup-closed-by-user":
+      return "Login cancelled.";
+    default:
+      return "Authentication failed.";
+  }
 }
