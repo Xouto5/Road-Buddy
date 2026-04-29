@@ -1,3 +1,12 @@
+/* ======================================== //
+CREDITS:
+BRIAN:  Created Trips Results sub-screen, added navigation from 
+        Estimate screen, added Save Trip modal.
+  
+        Date completed: 04/26/2026
+
+// ======================================== */
+
 import React, { useState } from "react";
 import {
   View,
@@ -7,6 +16,7 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
@@ -30,14 +40,62 @@ export default function TripResults({ route, navigation }) {
     vehicle = "",
     mpg = "",
     distance = "",
+    duration = 0,
     gasPrice = "",
     fuelType = "Regular",
+    overviewPolyline = "",
     gallons = "0.00",
     costPerMile = "0.00",
     totalCost = "0.00",
   } = route.params ?? {};
 
   const gasPriceNumber = parseFloat(String(gasPrice || "").replace(/[^0-9.]/g, ""));
+
+  const handleShowInOverview = () => {
+    const mpgNumber = parseFloat(String(mpg || "").replace(/[^0-9.]/g, ""));
+    const distanceNumber = parseFloat(String(distance || "").replace(/[^0-9.]/g, ""));
+    const durationNumber = parseFloat(String(duration || "").replace(/[^0-9.]/g, ""));
+
+    if (!overviewPolyline) {
+      Alert.alert(
+        "Overview unavailable",
+        "Route details are missing. Recalculate the trip and try again.",
+      );
+      return;
+    }
+
+    navigation.navigate("Home", {
+      screen: "Overview",
+      params: {
+        estDetail: {
+          distance: Number.isFinite(distanceNumber) ? Math.ceil(distanceNumber) : 0,
+          duration: Number.isFinite(durationNumber) ? Math.ceil(durationNumber) : 0,
+          gasPrice: Number.isFinite(gasPriceNumber) ? gasPriceNumber : 0,
+          polylines: {
+            encodedPolyline: overviewPolyline,
+          },
+        },
+        pointA: {
+          placePrediction: {
+            text: {
+              text: startLocation || "Unknown start",
+            },
+          },
+        },
+        pointB: {
+          placePrediction: {
+            text: {
+              text: destination || "Unknown destination",
+            },
+          },
+        },
+        car: {
+          mpg_combined: Number.isFinite(mpgNumber) && mpgNumber > 0 ? mpgNumber : 25,
+          label: vehicle || "Vehicle",
+        },
+      },
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
@@ -82,6 +140,13 @@ export default function TripResults({ route, navigation }) {
         </View>
 
         <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleShowInOverview}
+          >
+            <Text style={styles.primaryButtonText}>Show in Overview</Text>
+          </TouchableOpacity>
+
           <View style={styles.buttonRow}>
             {/* Add "Save Trip" button at bottom of screen. */}
             {/* When pressed, show modal popup. */}
@@ -108,7 +173,7 @@ export default function TripResults({ route, navigation }) {
               onPress={() =>
                 navigation.navigate("Home", {
                   screen: "Estimate",
-                  params: { startLocation, destination, vehicle, mpg, gasPrice, fuelType },
+                  params: { startLocation, destination, vehicle, mpg, gasPrice, fuelType, distance },
                 })
               }
             >
