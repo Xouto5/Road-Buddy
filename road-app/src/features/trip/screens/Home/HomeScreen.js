@@ -5,13 +5,22 @@ Prompts user for trip information and displays brief estimate.
 
 Author: Bryan Cardeno                               
 Date: 02-21-2026 
+
+Removed estimate function.
+Recent locations are shown when selecting a start location and destination, saved in recentLocationService in services.
+Added start trip button which takes you to the overview screen with current locations and vehicle configuration.
+Added a save trip button with accompanying modal, which still needs to be hooked up to backend
+
+Author: Joshua Swineford
+Date: 04-29-2026
 */
 
-import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
+import * as Location from "expo-location";
 
 import {
   getGoogleDistance,
@@ -19,9 +28,12 @@ import {
   getGooglePlaceLongLat,
 } from "../../services/googleAPIService";
 
+import { getAuth } from "firebase/auth";
+
 import VehicleSelection from "./VehicleSelection";
 import AddressSelection from "./AddressSelection";
 import SelectField from "../../../../shared/component/SelectField";
+import { saveRecentLocation } from "../../services/recentLocationService";
 
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 
@@ -41,17 +53,24 @@ export default function HomeScreen({ userName }) {
 
   const navigation = useNavigation();
 
+  const auth = getAuth();
+  const user = auth.currentUser;
+
   const [startLocation, setStartLocation] = useState("");
   const [destination, setDestination] = useState("");
   const [vehicle, setVehicle] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalContext, setModalContext] = useState(null);
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [sessionToken, setSessionToken] = useState(() => Crypto.randomUUID());
   const [estimate, setEstimate] = useState("");
   const [longLat, setLongLat] = useState("");
   const [gasStations, setGasStations] = useState([]);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState("");
+  const [validationErrors, setValidationErrors] = useState({});
 
-  const onQuickCalc = async () => {
+  /*const onQuickCalc = async () => {
     const findCheapest = (ar) => {
       let val = 999;
 
@@ -76,6 +95,8 @@ export default function HomeScreen({ userName }) {
       return;
     }
 
+    
+
     if (!longLat) {
       console.log("long lat invalid", longLat);
       return;
@@ -98,9 +119,154 @@ export default function HomeScreen({ userName }) {
       polylines: polyline,
     }));
   };
+*/
+  const handleUseMyLocation = async () => {
+    try {
+      setLocationLoading(true);
+      setLocationError("");
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        setLocationError("Location permission denied. Enable it in your device settings.");
+        return;
+      }
+
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const [place] = await Location.reverseGeocodeAsync({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      });
+
+      const formattedLocation = place
+        ? [place.street, place.city, place.region].filter(Boolean).join(", ")
+        : `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+
+      const currentLocationData = {
+        placePrediction: {
+          text: {
+            text: formattedLocation,
+          },
+        },
+        coordinates: {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        },
+        isCurrentLocation: true,
+      };
+
+      setStartLocation(currentLocationData);
+
+      await saveRecentLocation({
+        placeId: null,
+        description: formattedLocation,
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        type: "current_location",
+      });
+
+      setValidationErrors((prev) => ({
+        ...prev,
+        startLocation: undefined,
+      }));
+    } catch (err) {
+      console.error("Location error:", err);
+      setLocationError("Could not retrieve location. Please try again.");
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  const handleStartTrip = async () => {
+    try {
+      const findCheapest = (ar) => {
+        let val = 999;
+
+        ar.forEach((element) => {
+          const regular = element.fuelOptions?.fuelPrices?.filter(
+            (gasType) => gasType.type === "REGULAR_UNLEADED"
+          );
+
+          if (!regular || regular.length === 0) return;
+
+          const wholePrice = parseInt(regular[0].price.units);
+          const decimal = parseInt(regular[0].price.nanos) / 1000000000;
+          const price = wholePrice + decimal;
+
+          if (price < val) val = price;
+        });
+
+        return val;
+      };
+
+      if (!startLocation || !destination || !vehicle) {
+        console.log("Missing start location, destination, or vehicle");
+        return;
+      }
+
+      if (!destination?.placePrediction?.placeId) {
+        console.log("Destination placeId missing");
+        return;
+      }
+
+      const filterStations = gasStations.filter((gas) => gas.fuelOptions);
+      const cheapest = findCheapest(filterStations);
+
+      let routeDistance;
+
+      if (startLocation?.isCurrentLocation && startLocation?.coordinates) {
+        console.log("Current location selected as start.");
+        console.log("Your getGoogleDistance service currently needs a placeId-based start.");
+        return;
+      }
+
+      if (!startLocation?.placePrediction?.placeId) {
+        console.log("Start location placeId missing");
+        return;
+      }
+
+      routeDistance = await getGoogleDistance(
+        startLocation.placePrediction.placeId,
+        destination.placePrediction.placeId
+      );
+
+      const { distanceMeters, duration, polyline } = routeDistance.routes[0];
+
+      const estDetail = {
+        distance: Math.ceil(metersToMiles(distanceMeters)),
+        duration: Math.ceil(secondsToMinutes(duration)),
+        gasPrice: cheapest,
+        polylines: polyline,
+      };
+
+      navigation.navigate("Overview", {
+        estDetail,
+        pointA: {
+          placePrediction: {
+            text: {
+              text: startLocation?.placePrediction?.text?.text || "Unknown start",
+            },
+          },
+        },
+        pointB: {
+          placePrediction: {
+            text: {
+              text: destination?.placePrediction?.text?.text || "Unknown destination",
+            },
+          },
+        },
+        car: vehicle,
+      });
+    } catch (error) {
+      console.error("Start trip error:", error);
+    }
+  };
 
   const onSave = () => {
-    console.log("save pressed");
+    setSaveModalVisible(true);
   };
 
   const onViewOverview = () => {
@@ -136,21 +302,36 @@ export default function HomeScreen({ userName }) {
     if (!startLocation) return;
 
     const getLongLat = async () => {
-      const data = await getGooglePlaceLongLat(
-        startLocation.placePrediction.placeId,
-      );
+      if (startLocation?.isCurrentLocation && startLocation?.coordinates) {
+        const coords = {
+          latitude: startLocation.coordinates.latitude,
+          longitude: startLocation.coordinates.longitude,
+        };
 
-      setLongLat(data.location);
+        setLongLat(coords);
 
-      const { places } = await getGoogleGasStationNearbyFromLocation(
-        data.location,
-      );
+        const { places } = await getGoogleGasStationNearbyFromLocation(coords);
+        setGasStations(places);
+        return;
+      }
 
-      setGasStations(places);
+      if (startLocation?.placePrediction?.placeId) {
+        const data = await getGooglePlaceLongLat(
+          startLocation.placePrediction.placeId
+        );
+
+        setLongLat(data.location);
+
+        const { places } = await getGoogleGasStationNearbyFromLocation(
+          data.location
+        );
+
+        setGasStations(places);
+      }
     };
 
     getLongLat();
-  }, [startLocation]);
+}, [startLocation]);
 
   useEffect(() => {
     if (!startLocation || !destination) return;
@@ -160,26 +341,44 @@ export default function HomeScreen({ userName }) {
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <View style={styles.container}>
         <View style={styles.screenTitle}>
-          <Text style={styles.title}>Welcome {userName || "Road Buddy"}</Text>
+          <Text style={styles.title}>Welcome</Text> 
+          <Text style={styles.title}>{user?.email}</Text>
         </View>
 
         <View style={styles.contentContainer}>
           <View style={styles.contents}>
-            <SelectField
-              label="Starting Location"
-              placeholder="Enter starting location"
-              handlePress={onStartLocationChange}
-              labelBgColor={DARK_THEME.primaryBackground}
-              value={startLocation && startLocation.placePrediction.text.text}
-            />
+            <Text style={styles.welcomeMsg}>Where do you want to go?</Text>
+
+            <View style={styles.locationRow}>
+              <View style={{ flex: 1 }}>
+                <SelectField
+                  label="Start Location"
+                  placeholder="Enter starting location"
+                  handlePress={onStartLocationChange}
+                  labelBgColor={DARK_THEME.primaryBackground}
+                  value={startLocation?.placePrediction?.text?.text || ""}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.locationButton, locationLoading && styles.locationButtonDisabled]}
+                onPress={handleUseMyLocation}
+                disabled={locationLoading}
+              >
+                <Text style={styles.locationButtonText}>
+                  {locationLoading ? "Locating…" : "Use my location"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
 
             <SelectField
-              label="Destination"
-              placeholder="Enter destination"
-              handlePress={onDestinationChange}
-              labelBgColor={DARK_THEME.primaryBackground}
-              value={destination && destination.placePrediction.text.text}
-            />
+                label="Destination"
+                placeholder="Enter destination"
+                handlePress={onDestinationChange}
+                labelBgColor={DARK_THEME.primaryBackground}
+                value={destination?.placePrediction?.text?.text || ""}
+              />
 
             <SelectField
               label="Vehicle"
@@ -187,14 +386,18 @@ export default function HomeScreen({ userName }) {
               handlePress={onSelectVehicle}
               labelBgColor={DARK_THEME.primaryBackground}
               value={
-                vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+                vehicle
+                  ? `${vehicle.year ?? ""} ${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim()
+                  : ""
               }
             />
+            {/*
             <Pressable onPress={onQuickCalc}>
               <View style={styles.caclBtnContainer}>
                 <Text style={styles.calcBtn}>Quick calculate</Text>
               </View>
             </Pressable>
+            
 
             {estimate && (
               <View style={styles.quickEstimateContainer}>
@@ -230,16 +433,21 @@ export default function HomeScreen({ userName }) {
                   </View>
                 </Pressable>
               </View>
-            )}
+            )} */}
           </View>
 
-          <View style={styles.caclBtnContainer}>
-            <Pressable onPress={onViewOverview}>
-              <Text style={styles.calcBtn}>View Overview</Text>
+          <View style={styles.bottomButtonRow}>
+            <Pressable style={styles.startTripButton} onPress={handleStartTrip}>
+              <Text style={styles.startTripText}>Start Trip</Text>
+            </Pressable>
+
+            <Pressable style={styles.saveTripButton} onPress={onSave}>
+              <Text style={styles.saveTripText}>Save Trip</Text>
             </Pressable>
           </View>
         </View>
 
+        {/* render location and car select modals */}
         <Modal
           style={styles.modal}
           visible={isModalVisible}
@@ -270,6 +478,32 @@ export default function HomeScreen({ userName }) {
             />
           )}
         </Modal>
+
+        {/* render save modal */}
+        <Modal
+          transparent
+          animationType="fade"
+          visible={saveModalVisible}
+          onRequestClose={() => setSaveModalVisible(false)}
+        >
+          <Pressable
+            style={styles.saveModalOverlay}
+            onPress={() => setSaveModalVisible(false)}
+          >
+            <Pressable style={styles.saveModalBox} onPress={() => {}}>
+              <Text style={styles.saveModalTitle}>Trip Saved!</Text>
+              <Text style={styles.saveModalMessage}>
+                Look at the Trips section to see your saved trips.
+              </Text>
+              <TouchableOpacity
+                style={styles.saveModalCloseButton}
+                onPress={() => setSaveModalVisible(false)}
+              >
+                <Text style={styles.saveModalCloseText}>Close</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -288,12 +522,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderLeftWidth: 0,
     borderRightWidth: 0,
-    height: 50,
+    height: 80,
     width: "90%",
     alignSelf: "center",
   },
   contentContainer: {
-    paddingHorizontal: 40,
+    paddingHorizontal: 20,
     paddingVertical: 10,
     flex: 1,
     justifyContent: "space-between",
@@ -303,22 +537,57 @@ const styles = StyleSheet.create({
   },
   title: {
     color: DARK_THEME.primaryText,
-    fontSize: 24,
+    fontSize: 26,
+    textAlign: "center",
+    flexWrap: "wrap",
+    fontWeight: "bold",
+  },
+  welcomeMsg: {
+    color: DARK_THEME.primaryText,
+    fontSize: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 3,
+    textAlign: "center",
+  },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 10,
+    marginBottom: 6,
   },
   overviewContainer: {
     justifyContent: "flex-end",
     borderWidth: 1,
   },
-  caclBtnContainer: {
-    height: 50,
-    borderWidth: 1,
-    backgroundColor: "#e4e4e4",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 10,
+  bottomButtonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 20,
   },
-  calcBtn: {
-    fontSize: 18,
+  startTripButton: {
+    flex: 1,
+    backgroundColor: "#3B82F6",
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    elevation: 3,
+  },
+  startTripText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  saveTripButton: {
+    flex: 1,
+    backgroundColor: "#e4e4e4",
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  saveTripText: {
+    color: "#000",
+    fontSize: 16,
     fontWeight: "bold",
   },
   quickEstimateContainer: {
@@ -353,12 +622,69 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0,
     borderRightWidth: 0,
   },
+  locationButton: {
+    backgroundColor: DARK_THEME.primaryText,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: 52,
+  },
+  locationButtonDisabled: {
+    opacity: 0.5,
+  },
+  locationButtonText: {
+    color: DARK_THEME.primaryBackground,
+    fontSize: 13,
+    fontWeight: "bold",
+  },
   textInput: {
     color: "#fafafa",
     paddingHorizontal: 15,
   },
   modal: {
     // backgroundColor: DARK_THEME.modalBackground,
+  },
+  saveModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  saveModalBox: {
+    backgroundColor: DARK_THEME.modalBackground || DARK_THEME.primaryBackground,
+    borderRadius: 14,
+    padding: 28,
+    width: "80%",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  saveModalTitle: {
+    color: DARK_THEME.primaryText,
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+
+  saveModalMessage: {
+    color: DARK_THEME.placeholder,
+    fontSize: 15,
+    textAlign: "center",
+  },
+
+  saveModalCloseButton: {
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    backgroundColor: DARK_THEME.primaryText,
+  },
+
+  saveModalCloseText: {
+    color: DARK_THEME.primaryBackground,
+    fontWeight: "bold",
+    fontSize: 15,
   },
   safeArea: {
     flex: 1,
