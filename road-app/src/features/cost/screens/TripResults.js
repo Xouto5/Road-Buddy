@@ -7,7 +7,7 @@ BRIAN:  Created Trips Results sub-screen, added navigation from
 
 // ======================================== */
 import { saveTrip } from "../../trip/services/tripServices";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -33,6 +33,8 @@ const withAlpha = (hexColor, alpha) => {
 
 export default function TripResults({ route, navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
+
+  const [currentTripId, setCurrentTripId] = useState(route.params?.tripId || null);
 
   const {
     startLocation = "",
@@ -108,12 +110,13 @@ export default function TripResults({ route, navigation }) {
       distance,
       gasPrice: gasPriceNumber, // Using the parsed number.
       fuelType,
-      totalCost,
+      totalCost
     };
 
-    const result = await saveTrip(tripData);
+    const result = await saveTrip(tripData, currentTripId);
 
     if (result.success) {
+      setCurrentTripId(result.id);
       setModalVisible(true); //Brian's "Saved!" modal only shows if it actually saved.
     }
     
@@ -190,7 +193,7 @@ export default function TripResults({ route, navigation }) {
               onPress={() =>
                 navigation.navigate("Home", {
                   screen: "Estimate",
-                  params: { startLocation, destination, vehicle, mpg, gasPrice, fuelType, distance },
+                  params: { tripId: currentTripId, startLocation, destination, vehicle, mpg, gasPrice, fuelType, distance },
                 })
               }
             >

@@ -15,7 +15,7 @@ BRIAN:  Modified screen as per parameters on ticket FE-2. Changed display title,
 
 // ======================================== */
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import * as Location from "expo-location";
 import {
   View,
@@ -60,11 +60,13 @@ export default function EstimateScreen({ navigation, route }) {
   const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] = useState(false);
   const debounceRef = useRef(null);
   const sessionTokenRef = useRef(`estimate-${Date.now()}`);
+  const [tripId, setTripId] = useState(null);
 
   // Repopulate fields when returning from TripResults via Edit Trip
   useEffect(() => {
     const p = route?.params;
     if (!p) return;
+    if (p.tripId !== undefined) setTripId(p.tripId); //Nathan added.
     if (p.startLocation !== undefined) setStartLocation(p.startLocation);
     if (p.destination !== undefined) setDestination(p.destination);
     if (p.vehicle !== undefined) setVehicle(p.vehicle);
@@ -340,6 +342,7 @@ export default function EstimateScreen({ navigation, route }) {
       const totalCostDisplay = totalTripCost !== null ? totalTripCost.toFixed(2) : "0.00";
 
       navigation.navigate("TripResults", {
+        tripId,
         startLocation,
         destination,
         vehicle,
