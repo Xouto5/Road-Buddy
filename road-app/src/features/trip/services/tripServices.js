@@ -3,7 +3,7 @@
 Author: Nathan Rochel                               
 Date: 4/23/2026
 
-Description: Trip services that allow users to save, delete, or update a trip.
+Description: Trip services that allow users to save and delete a trip.
 
 */
 
@@ -19,9 +19,11 @@ export const saveTrip = async (tripData) => {
     const currentUser = auth.currentUser;
 
     const docRef = await addDoc(tripsRef, {
+
       ...tripData,            
       userId: currentUser.uid,         
-      createdAt: serverTimestamp(),
+      createdAt: serverTimestamp()
+
     });
 
     return { success: true, id: docRef.id };

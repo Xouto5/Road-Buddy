@@ -6,7 +6,7 @@ BRIAN:  Created Trips Results sub-screen, added navigation from
         Date completed: 04/26/2026
 
 // ======================================== */
-
+import { saveTrip } from "../../trip/services/tripServices";
 import React, { useState } from "react";
 import {
   View,
@@ -97,6 +97,29 @@ export default function TripResults({ route, navigation }) {
     });
   };
 
+  //Saving trip information to firestore -Nathan.
+  const handleSaveToDatabase = async () => {
+    //Preparing the data package using the variables Brain created.
+    const tripData = {
+      startLocation,
+      destination,
+      vehicle,
+      mpg,
+      distance,
+      gasPrice: gasPriceNumber, // Using the parsed number.
+      fuelType,
+      totalCost,
+    };
+
+    const result = await saveTrip(tripData);
+
+    if (result.success) {
+      setModalVisible(true); //Brian's "Saved!" modal only shows if it actually saved.
+    }
+    
+  };
+
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -155,13 +178,7 @@ export default function TripResults({ route, navigation }) {
             {/* Modal should be dismissible by tapping outside or pressing a close button. */}
             <TouchableOpacity
               style={[styles.primaryButton, { flex: 1 }]}
-              onPress={() => {
-
-                setModalVisible(true);
-                console.log("Save Button Pressed!");  // <-- add functionality here for save button.
-
-                }
-              }
+              onPress={handleSaveToDatabase}
             >
               <Text style={styles.primaryButtonText}>Save Trip</Text>
             </TouchableOpacity>
