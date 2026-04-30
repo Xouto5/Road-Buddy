@@ -1,20 +1,16 @@
 /* ======================================== //
 CREDITS:
 
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { loginUser } from '../services/authServices';
-// Set username and password of user
-KEITH: Login screen for RoadBuddy app. Users can enter their username and password to log in, 
-       or use social login options. The screen also includes links for password recovery and account creation.
-       RoadBuddy Logo is at the top. White back button is also at the top left corner of the screen to allow users 
-       to navigate back to the weclome screen.
 
-       Date completed: 02/24/2026
+KEITH: Login screen for RoadBuddy app. Users can enter their username and password to log in, 
+        or use social login options. The screen also includes links for password recovery and account creation.
+        RoadBuddy Logo is at the top. White back button is also at the top left corner of the screen to allow users 
+        to navigate back to the welcome screen.
+
+        Date completed: 02/24/2026
 
 MANUEL:
-  I have created the text boxes for username and passowrd outline. Added barely any CSS to it too
+  I have created the text boxes for username and password outline. Added barely any CSS to it too
 
 
 // ======================================== */
@@ -29,7 +25,7 @@ import {
   TouchableOpacity,
   Image,
   KeyboardAvoidingView,
-  Platform,
+  Modal, 
 } from "react-native";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import { loginUser } from "../services/authServices";
@@ -38,20 +34,40 @@ import { checkIfUserSignedIn } from "../services/authServices";
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  
+  const [showError, setShowError] = useState(false); 
+  const [errors, setErrors] = useState({ username: false, password: false }); 
+  
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const [failedAttempts, setFailedAttempts] = useState(0);
 
   const handleLogin = (username, password) => {
+    setShowError(false);
+    setErrors({ username: false, password: false });
+
+    if (!username || !password) {
+      setShowError(true); 
+      setErrors({
+        username: !username, 
+        password: !password,
+      });
+      return; 
+    }
+
     loginAsync(username, password);
   };
 
   async function loginAsync(username, password) {
     await loginUser(username, password);
     console.log("Logging in with:", username, password);
+    
     if (checkIfUserSignedIn() == false) {
-      console.log(checkIfUserSignedIn());
-      console.log("yippe");
-      const popupElement = document.getElementById("my-dialog");
-      popupElement.showModal();
+      setFailedAttempts(prev => prev + 1);
+      setModalVisible(true); 
     } else {
+      // NEW: Reset failed attempts on success
+      setFailedAttempts(0);
       window.location.href = "TempMenu.js";
     }
   }
@@ -62,13 +78,25 @@ export default function LoginScreen({ navigation }) {
       edges={["left", "right", "bottom", "top"]}
     >
       <KeyboardAvoidingView style={styles.container}>
-        {/* Please replace this section */}
-        {/* <dialog id="my-dialog">
-          <p>Invalid credentials, please try again!</p>
-          <button commandfor="my-dialog" command="close">
-            Close
-          </button>
-        </dialog> */}
+        
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalText}>Username or password is incorrect</Text>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         <View style={styles.logoContainer}>
           <Image
@@ -79,8 +107,15 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <View style={styles.inputContainer}>
+          {showError && (
+            <Text style={styles.errorMessage}>Please fill all required fields</Text>
+          )}
+
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              errors.username && { borderColor: 'red', borderWidth: 2 }
+            ]}
             placeholder="Username"
             placeholderTextColor={DARK_THEME.placeholder}
             value={username}
@@ -89,7 +124,10 @@ export default function LoginScreen({ navigation }) {
           />
 
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              errors.password && { borderColor: 'red', borderWidth: 2 }
+            ]}
             placeholder="Password"
             placeholderTextColor={DARK_THEME.placeholder}
             value={password}
@@ -99,9 +137,15 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <View style={styles.linksContainer}>
+          {failedAttempts >= 3 && (
+            <Text style={styles.guidanceText}>
+              Having trouble? Try resetting your password.
+            </Text>
+          )}
+
           <TouchableOpacity
             style={styles.loginButton}
-            onPress={() => loginUser(username, password)}
+            onPress={() => handleLogin(username, password)}
           >
             <Text style={styles.loginButtonText}>Login</Text>
           </TouchableOpacity>
@@ -110,7 +154,12 @@ export default function LoginScreen({ navigation }) {
             <TouchableOpacity
               onPress={() => navigation.navigate("ResetPassword")}
             >
-              <Text style={styles.linkText}>Forgot your Password?</Text>
+              <Text style={[
+                styles.linkText, 
+                failedAttempts >= 3 && styles.highlightedLink
+              ]}>
+                Forgot your Password?
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -145,14 +194,53 @@ const styles = StyleSheet.create({
     backgroundColor: DARK_THEME.primaryBackground,
     paddingHorizontal: 20,
   },
-  backButton: {
-    marginTop: 10,
-    marginBottom: 20,
-    alignSelf: "flex-start",
+  errorMessage: {
+    color: 'red',
+    fontSize: 14,
+    marginBottom: 10,
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
-  backText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 28,
+  guidanceText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  highlightedLink: {
+    color: '#FFD700',
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalView: {
+    width: "80%",
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 25,
+    alignItems: "center",
+    elevation: 5,
+  },
+  modalText: {
+    marginBottom: 20,
+    textAlign: "center",
+    fontSize: 16,
+    color: "#000",
+  },
+  modalButton: {
+    backgroundColor: "#000",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+  },
+  modalButtonText: {
+    color: "white",
     fontWeight: "bold",
   },
   logoContainer: {
@@ -169,7 +257,6 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-
     borderColor: DARK_THEME.primaryBorder,
     borderRadius: 8,
     padding: 16,
