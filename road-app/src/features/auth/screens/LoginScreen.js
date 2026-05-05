@@ -51,6 +51,7 @@ export default function LoginScreen({ navigation }) {
       console.log("yippe");
       const popupElement = document.getElementById("my-dialog");
       popupElement.showModal();
+      
     } else {
       window.location.href = "TempMenu.js";
     }

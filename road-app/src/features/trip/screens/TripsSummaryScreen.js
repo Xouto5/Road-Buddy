@@ -17,9 +17,10 @@ import {
   Pressable,
   ScrollView,
   TouchableOpacity,
+  Alert
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
+import { verifyEmail, isUserVerified } from "../../auth/services/authServices";
 import { DARK_THEME } from "../../../shared/style/ColorScheme"; // Consistent dark theme styling
 
 // Sample trip with mock data
@@ -163,6 +164,22 @@ function TripSection({ title, items, onToggle }) {
 // Main Trips Summary Screen Component
 export default function TripsSummaryScreen({ navigation }) {
   const [trips, setTrips] = useState(sampleTrips);
+
+    if(!isUserVerified())
+    Alert.alert(
+    'Email is not verified',
+    'Please verify your email. Check your email for an existing link, or click send again to receive a new one',
+    [
+      {
+        text: 'Okay', 
+      },
+      {
+        text: 'Send Again', 
+        onPress: () => verifyEmail
+      },
+    ],
+    {cancelable: false},
+    );
 
   // Toggle function to expand/collapse trip details
   const toggleTrip = (id) => {

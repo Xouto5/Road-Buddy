@@ -11,6 +11,8 @@ import { initializeAuth } from "firebase/auth";
 import { getReactNativePersistence } from "@firebase/auth/dist/rn/index.js";
 import { getFirestore } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { doc, addDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore"; 
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -31,17 +33,16 @@ export const auth = initializeAuth(app, {
 
 // Firestore operations function
 // Change this function to accept name and email
-export const performFirestoreOperations = async (name, email) => {
+export const performFirestoreOperations = async (name, lastname, email, carType, phone) => {
   try {
     const docRef = await addDoc(collection(db, "users"), {
-      name: name, // Save the name
+      firstname: name, // Save the name
+      lastname: lastname,
       email: email, // Save the email
-    });
-    console.log("Document written with ID: ", docRef.id);
-
-    const querySnapshot = await getDocs(collection(db, "users"));
-    querySnapshot.forEach((doc) => {
-      console.log(`${doc.id} => ${doc.data()}`);
+      carType: carType,
+      phone: phone,
+      isVerified: false,
+      userID: auth.currentUser.uid
     });
   } catch (e) {
     console.error("Error processing Firestore operations: ", e);
@@ -74,5 +75,15 @@ export const performFirestoreOperations = async (name, email) => {
   }
   */
 };
+
+export  async function getUserData(){
+  //load in User data
+  const q = query(collection(db, "users"), where("userID", "==", auth.currentUser.uid));
+
+const querySnapshot = await getDocs(q);
+console.log(querySnapshot.docs[0].data().firstname)
+return querySnapshot.docs[0].data()
+}
+
 
 export default app;

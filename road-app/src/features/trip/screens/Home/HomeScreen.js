@@ -7,12 +7,12 @@ Author: Bryan Cardeno
 Date: 02-21-2026 
 */
 
-import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
-
+import { verifyEmail, isUserVerified } from "../../../auth/services/authServices";
 import {
   getGoogleDistance,
   getGoogleGasStationNearbyFromLocation,
@@ -50,6 +50,24 @@ export default function HomeScreen({ userName }) {
   const [estimate, setEstimate] = useState("");
   const [longLat, setLongLat] = useState("");
   const [gasStations, setGasStations] = useState([]);
+
+  if(!isUserVerified){
+    Alert.alert(
+      'Email is not verified',
+      'Please verify your email. Check your email for an existing link, or click send again to receive a new one',
+      [
+        {
+          text: 'Okay', 
+        },
+        {
+          text: 'Send Again', 
+          onPress: () => verifyEmail
+        },
+      ],
+      {cancelable: false},
+      );
+  }
+
 
   const onQuickCalc = async () => {
     const findCheapest = (ar) => {
