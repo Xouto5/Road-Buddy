@@ -4,12 +4,37 @@
 // App.js has also been edited to include the appropriate changes.
 // Finished on 02/25/2026
 
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image,ImageBackground} from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, StyleSheet, Image, ImageBackground, Animated } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
 export default function WelcomeScreen() {
   const navigation = useNavigation();
+  
+  // Create animated values for fade and scale 
+  const fadeAnim = useRef(new Animated.Value(0)).current; 
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 2500, 
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 2500,
+        useNativeDriver: true,
+      })
+    ]).start();
+
+    const timer = setTimeout(() => {
+      navigation.replace('Login');  
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [fadeAnim, scaleAnim, navigation]);
 
   return (
     <ImageBackground 
@@ -18,22 +43,16 @@ export default function WelcomeScreen() {
       imageStyle={styles.backgroundImage}
       resizeMode="cover"
     >
-      <View style={styles.headerContainer}>
-        <Text style={styles.welcomeText}>Welcome to</Text>
+      <Animated.View style={[
+        styles.centerContainer, 
+        { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+      ]}>
         <Image 
           source={require('../../../../assets/images/RoadBuddyLogoText.png')} 
           style={styles.logo}
           resizeMode="contain"
         />
-      </View>
-
-      <TouchableOpacity 
-        style={styles.startButton}
-        onPress={() => navigation.navigate('Login')}
-      >
-        <Text style={styles.startButtonText}>Start</Text>
-      </TouchableOpacity>
-
+      </Animated.View>
     </ImageBackground>
   );
 }
@@ -53,34 +72,12 @@ const styles = StyleSheet.create({
       { translateY: -13 } 
     ]
   },
-  headerContainer: {
-    position: 'absolute',
-    top: 10,
+  centerContainer: {
     alignItems: 'center',
-  },
-  welcomeText: {
-    fontSize: 35,
-    fontWeight: 'bold',
-    color: '#000000',
-    marginBottom: 20,
+    justifyContent: 'center',
   },
   logo: {
     width: 380,
     height: 170,
-    transform: [{ translateX: 10 }],
-  },
-  startButton: {
-    backgroundColor: '#FFFFFF',
-    width: '90%',
-    paddingVertical: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 80,
-  },
-  startButtonText: {
-    color: '#000000',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });
