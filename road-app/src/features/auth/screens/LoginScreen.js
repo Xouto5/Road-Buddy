@@ -1,17 +1,3 @@
-Here is your **clean, fully working `LoginScreen.js`** with:
-
-* modal error system preserved
-* failedAttempts preserved
-* session persistence kept
-* Google login kept
-* all merge conflicts removed
-* only ONE login flow
-
-No comments added.
-
----
-
-```javascript
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -64,13 +50,17 @@ export default function LoginScreen({ navigation }) {
   }, []);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
+    expoClientId:
+      "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
     iosClientId: "YOUR_IOS_CLIENT_ID",
     androidClientId: "YOUR_ANDROID_CLIENT_ID",
-    webClientId: "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
+    webClientId:
+      "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
   });
 
   useEffect(() => {
+    console.log("Google response:", response); // ← ADD THIS LINE
+
     const handleGoogleLogin = async () => {
       if (response?.type === "success") {
         const idToken = response.authentication?.idToken;
@@ -105,6 +95,13 @@ export default function LoginScreen({ navigation }) {
 
       if (!result || result.success === false) {
         setFailedAttempts((prev) => prev + 1);
+
+        setErrors({
+          username: true,
+          password: true,
+        });
+
+        setShowError(true);
         setModalVisible(true);
       } else {
         setFailedAttempts(0);
@@ -112,6 +109,12 @@ export default function LoginScreen({ navigation }) {
       }
     } catch (error) {
       setFailedAttempts((prev) => prev + 1);
+
+      setErrors({
+        username: true,
+        password: true,
+      });
+
       setModalVisible(true);
     }
   };
@@ -154,7 +157,9 @@ export default function LoginScreen({ navigation }) {
         <View style={styles.inputContainer}>
           {showError && (
             <Text style={styles.errorMessage}>
-              Please fill all required fields
+              {!username || !password
+                ? "Please fill all required fields"
+                : "Incorrect username or password"}
             </Text>
           )}
 
@@ -166,7 +171,11 @@ export default function LoginScreen({ navigation }) {
             placeholder="Username"
             placeholderTextColor={DARK_THEME.placeholder}
             value={username}
-            onChangeText={setUsername}
+            onChangeText={(text) => {
+              setUsername(text);
+              setErrors((prev) => ({ ...prev, username: false }));
+              setShowError(false);
+            }}
             autoCapitalize="none"
           />
 
@@ -178,7 +187,11 @@ export default function LoginScreen({ navigation }) {
             placeholder="Password"
             placeholderTextColor={DARK_THEME.placeholder}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              setErrors((prev) => ({ ...prev, password: false }));
+              setShowError(false);
+            }}
             secureTextEntry
           />
         </View>
@@ -193,13 +206,23 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.socialButton, !request && { opacity: 0.5 }]}
-          disabled={!request}
-          onPress={() => promptAsync()}
-        >
-          <Text style={styles.socialButtonText}>Login with Google</Text>
-        </TouchableOpacity>
+        <View style={styles.socialContainer}>
+          <TouchableOpacity
+            style={[styles.socialButton, !request && { opacity: 0.5 }]}
+            disabled={!request}
+            onPress={() => promptAsync()}
+          >
+            <Text style={styles.socialButtonText}>Login with Google</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.socialButton}>
+            <Text style={styles.socialButtonText}>Login with X</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.socialButton}>
+            <Text style={styles.socialButtonText}>Login with Apple</Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           onPress={() => navigation.navigate("ResetPassword")}
@@ -311,6 +334,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
+  socialContainer: {
+    width: "100%",
+    marginTop: 10,
+  },
   socialButton: {
     backgroundColor: "#fff",
     paddingVertical: 12,
@@ -333,4 +360,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-```
