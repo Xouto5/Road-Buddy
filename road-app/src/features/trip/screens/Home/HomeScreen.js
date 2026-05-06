@@ -15,7 +15,7 @@ Author: Joshua Swineford
 Date: 04-29-2026
 */
 
-import { View, Text, StyleSheet, Pressable, Modal, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal, Alert, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -138,7 +138,6 @@ export default function HomeScreen({ userName }) {
       polylines: polyline,
     }));
   };
-*/
   const handleUseMyLocation = async () => {
     try {
       setLocationLoading(true);
