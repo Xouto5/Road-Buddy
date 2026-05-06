@@ -27,11 +27,31 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { logOut } from "../../auth/services/authServices";
+import { logOut, isUserVerified, verifyEmail, callReset} from "../../auth/services/authServices";
+import { getAuth } from "firebase/auth";
+import { getUserData } from "../../../core/firebase/firebaseConfig";
+
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const inputRef = useRef(null);
+
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const response = await getUserData();
+      const data = await response;
+      setFirstName(data.firstname)
+      setLastName(data.lastname)
+      setPhone(data.phone)
+      setEmail(data.email)
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  fetchData();
+}, []);
 
   // Saved values
   const [username, setUsername] = useState("");
@@ -76,6 +96,23 @@ export default function ProfileScreen() {
   const [editingKey, setEditingKey] = useState(null);
   const isEditingAny = editingKey !== null;
 
+  if(!isUserVerified()){
+    Alert.alert(
+      'Email is not verified',
+      'Please verify your email. Check your email for an existing link, or click send again to receive a new one',
+      [
+        {
+          text: 'Okay', 
+        },
+        {
+          text: 'Send Again', 
+          onPress: () => verifyEmail()
+        },
+      ],
+      {cancelable: false},
+      );
+  }
+
   const hasUnsavedChanges =
     usernameDraft !== username ||
     firstNameDraft !== firstName ||
@@ -105,6 +142,10 @@ export default function ProfileScreen() {
   };
 
   const onSaveChanges = async () => {
+    
+
+
+
     // TODO: Backend implement Save Button functionality
     inputRef.current?.blur?.();
     setEditingKey(null);
@@ -596,6 +637,17 @@ export default function ProfileScreen() {
                 >
                   <Text style={styles.saveBtnText}>Save Changes</Text>
                 </Pressable>
+                
+                 <View style={styles.bigSpacer} />
+
+                  <Pressable
+                  style={[
+                    styles.saveBtn,
+                  ]}
+                  onPress={callReset}
+                >
+                  <Text style={styles.saveBtnText}>Reset Password</Text>
+                </Pressable>
 
                 {hasUnsavedChanges && (
                   <Text style={styles.unsavedText}>
@@ -618,6 +670,8 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
+
+
 
 const COLORS = {
   topbar: "#1C2A3C",

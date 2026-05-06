@@ -7,10 +7,11 @@ import {
   GoogleAuthProvider,
   signInWithCredential,
   linkWithCredential,
+  sendEmailVerification,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 
 // SESSION PERSISTENCE
-
 export function observeAuthState(callback) {
   return onAuthStateChanged(auth, (user) => {
     callback(user);
@@ -18,10 +19,14 @@ export function observeAuthState(callback) {
 }
 
 // EMAIL SIGN UP
-
 export async function createUser(email, password) {
   try {
     const result = await createUserWithEmailAndPassword(auth, email, password);
+
+    if (result.user) {
+      await sendEmailVerification(result.user);
+    }
+
     return { success: true, user: result.user };
   } catch (error) {
     return { success: false, error: formatError(error) };
@@ -29,7 +34,6 @@ export async function createUser(email, password) {
 }
 
 // EMAIL LOGIN
-
 export async function loginUser(email, password) {
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
@@ -43,17 +47,14 @@ export async function loginUser(email, password) {
 export async function handleGoogleAuth(idToken, accessToken) {
   try {
     const credential = GoogleAuthProvider.credential(idToken, accessToken);
-
     const result = await signInWithCredential(auth, credential);
-
     return { success: true, user: result.user };
   } catch (error) {
     return { success: false, error: formatError(error) };
   }
 }
 
-// link Google to existing account
-
+// LINK GOOGLE ACCOUNT
 export async function linkGoogleAccount(idToken, accessToken) {
   try {
     if (!auth.currentUser) {
@@ -61,7 +62,6 @@ export async function linkGoogleAccount(idToken, accessToken) {
     }
 
     const credential = GoogleAuthProvider.credential(idToken, accessToken);
-
     const result = await linkWithCredential(auth.currentUser, credential);
 
     return { success: true, user: result.user };
@@ -74,6 +74,51 @@ export async function linkGoogleAccount(idToken, accessToken) {
 export async function logOut() {
   try {
     await signOut(auth);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: formatError(error) };
+  }
+}
+
+// PASSWORD RESET (BETTER VERSION)
+export async function resetPassword(email) {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: formatError(error) };
+  }
+}
+
+// VERIFY EMAIL
+export async function verifyEmail() {
+  try {
+    if (!auth.currentUser) {
+      throw new Error("No user logged in");
+    }
+
+    await sendEmailVerification(auth.currentUser);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: formatError(error) };
+  }
+}
+
+// CHECK EMAIL VERIFIED
+export function isUserVerified() {
+  return auth.currentUser?.emailVerified || false;
+}
+
+// LEGACY RESET (kept, but fixed)
+export async function callReset() {
+  try {
+    if (!auth.currentUser?.email) {
+      throw new Error("No email available");
+    }
+
+    await sendPasswordResetEmail(auth, auth.currentUser.email);
+    await logOut();
+
     return { success: true };
   } catch (error) {
     return { success: false, error: formatError(error) };
