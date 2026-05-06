@@ -7,17 +7,26 @@ Author: Bryan Cardeno
 Date: 02-21-2026 
 */
 
-import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Modal,
+  FlatList,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
 
 import {
-  getGoogleDistance,
+  getGoogleRoutes,
   getGoogleGasStationNearbyFromLocation,
   getGooglePlaceLongLat,
 } from "../../services/googleAPIService";
+
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 import VehicleSelection from "./VehicleSelection";
 import AddressSelection from "./AddressSelection";
@@ -31,18 +40,26 @@ import {
   calcGasCost,
 } from "../../../../shared/utility/utils";
 
-// TODO: Create state for all the calculated estimate values to be passed to overview.
+const createStopObject = () => ({
+  id: Crypto.randomUUID(),
+  placeId: null,
+  text: null,
+});
+
 export default function HomeScreen({ userName }) {
   const MODAL_CONTEXT = {
     START_LOC: "start",
     END_LOC: "end",
     CAR_SELECT: "vehicle",
+    STOP_LOC: "stop",
   };
 
   const navigation = useNavigation();
 
   const [startLocation, setStartLocation] = useState("");
   const [destination, setDestination] = useState("");
+  const [stops, setStops] = useState([]);
+  const [selectedStop, setSelectedStop] = useState("");
   const [vehicle, setVehicle] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalContext, setModalContext] = useState(null);
@@ -51,30 +68,29 @@ export default function HomeScreen({ userName }) {
   const [longLat, setLongLat] = useState("");
   const [gasStations, setGasStations] = useState([]);
 
+  const findCheapest = (ar) => {
+    let val = 999;
+
+    ar.forEach((element) => {
+      const regular = element.fuelOptions.fuelPrices.filter(
+        (gasType) => gasType.type == "REGULAR_UNLEADED",
+      );
+
+      const wholePrice = parseInt(regular[0].price.units);
+      const decimal = parseInt(regular[0].price.nanos) / 1000000000;
+
+      const price = wholePrice + decimal;
+
+      if (price < val) val = price;
+    });
+
+    return val;
+  };
   const onQuickCalc = async () => {
-    const findCheapest = (ar) => {
-      let val = 999;
-
-      ar.forEach((element) => {
-        const regular = element.fuelOptions.fuelPrices.filter(
-          (gasType) => gasType.type == "REGULAR_UNLEADED",
-        );
-
-        const wholePrice = parseInt(regular[0].price.units);
-        const decimal = parseInt(regular[0].price.nanos) / 1000000000;
-
-        const price = wholePrice + decimal;
-
-        if (price < val) val = price;
-      });
-
-      return val;
-    };
-
-    if (!startLocation || !destination) {
-      console.log("invalid start or destination");
-      return;
-    }
+    // if (!startLocation || !destination) {
+    //   console.log("invalid start or destination");
+    //   return;
+    // }
 
     if (!longLat) {
       console.log("long lat invalid", longLat);
@@ -84,37 +100,44 @@ export default function HomeScreen({ userName }) {
     const filterStations = gasStations.filter((gas) => gas.fuelOptions);
     const cheapest = findCheapest(filterStations);
 
-    const routeDistance = await getGoogleDistance(
+    const intermediates = stops.map((stop) => {
+      placeId: stop.placeId;
+    });
+
+    const routeDistance = await getGoogleRoutes(
       startLocation.placePrediction.placeId,
       destination.placePrediction.placeId,
+      intermediates,
     );
 
     const { distanceMeters, duration, polyline } = routeDistance.routes[0];
 
-    setEstimate(() => ({
+    const result = {
       distance: Math.ceil(metersToMiles(distanceMeters)),
       duration: Math.ceil(secondsToMinutes(duration)),
       gasPrice: cheapest,
       polylines: polyline,
-    }));
+    };
+
+    setEstimate(result);
+    return result;
   };
 
   const onSave = () => {
     console.log("save pressed");
   };
 
-  const onViewOverview = () => {
-    console.log("view overview pressed");
-    console.log(estimate);
+  const onViewOverview = async () => {
+    if (!startLocation || !destination || !vehicle) return;
 
-    if (estimate.polylines) {
-      navigation.navigate("Overview", {
-        estDetail: estimate,
-        pointA: startLocation,
-        pointB: destination,
-        car: vehicle,
-      });
-    }
+    const est = await onQuickCalc();
+
+    navigation.navigate("Overview", {
+      estDetail: est,
+      pointA: startLocation,
+      pointB: destination,
+      car: vehicle,
+    });
   };
 
   const onSelectVehicle = () => {
@@ -152,9 +175,68 @@ export default function HomeScreen({ userName }) {
     getLongLat();
   }, [startLocation]);
 
-  useEffect(() => {
-    if (!startLocation || !destination) return;
-  }, [startLocation, destination]);
+  // useEffect(() => {
+  //   if (!startLocation || !destination) return;
+  // }, [startLocation, destination]);
+
+  const handleAddStop = () => {
+    if (stops.length === 25) return;
+
+    setStops((prevStops) => [...prevStops, createStopObject()]);
+  };
+
+  const handleStopAddress = (item) => {
+    console.log("item", item);
+    console.log("selected stop", selectedStop);
+
+    setStops((prevStops) => {
+      const newStops = prevStops.map((stop) => {
+        if (stop.id !== selectedStop) return stop;
+
+        return {
+          ...stop,
+          placeId: item.placePrediction.placeId,
+          text: item.placePrediction.text.text,
+        };
+      });
+
+      return newStops;
+    });
+  };
+
+  const onTrashPress = (id) => {
+    console.log(id);
+
+    setStops((prevStops) => {
+      const newStops = prevStops.filter((stop) => stop.id != id);
+
+      return newStops;
+    });
+  };
+
+  const onStopChange = (id) => {
+    setSelectedStop(id);
+    setModalContext(MODAL_CONTEXT.STOP_LOC);
+    setIsModalVisible(true);
+  };
+
+  const renderStops = ({ item, index }) => (
+    <View style={styles.stopContainer}>
+      <SelectField
+        label={`Stop ${index + 1}`}
+        placeholder="Enter a stop"
+        handlePress={() => onStopChange(item.id)}
+        labelBgColor={DARK_THEME.primaryBackground}
+        containerStyle={{ flex: 1 }}
+        value={item.text}
+      />
+      <Pressable onPress={() => onTrashPress(item.id)}>
+        <View style={styles.trashContainer}>
+          <FontAwesome name="trash-o" size={24} color="#fafafa" />
+        </View>
+      </Pressable>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
@@ -181,6 +263,27 @@ export default function HomeScreen({ userName }) {
               value={destination && destination.placePrediction.text.text}
             />
 
+            {stops.length > 0 && (
+              <FlatList
+                style={styles.flatListContainer}
+                contentContainerStyle={styles.flatListContent}
+                data={stops}
+                renderItem={renderStops}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={true}
+              />
+            )}
+
+            <SelectField
+              placeholder="Add a stop +"
+              handlePress={handleAddStop}
+              labelBgColor={DARK_THEME.primaryBackground}
+              value={
+                vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+              }
+              isPlaceholderCenter={true}
+            />
+
             <SelectField
               label="Vehicle"
               placeholder="Select a vehicle"
@@ -190,11 +293,11 @@ export default function HomeScreen({ userName }) {
                 vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
               }
             />
-            <Pressable onPress={onQuickCalc}>
+            {/* <Pressable onPress={onQuickCalc}>
               <View style={styles.caclBtnContainer}>
                 <Text style={styles.calcBtn}>Quick calculate</Text>
               </View>
-            </Pressable>
+            </Pressable> */}
 
             {estimate && (
               <View style={styles.quickEstimateContainer}>
@@ -232,12 +335,11 @@ export default function HomeScreen({ userName }) {
               </View>
             )}
           </View>
-
-          <View style={styles.caclBtnContainer}>
-            <Pressable onPress={onViewOverview}>
-              <Text style={styles.calcBtn}>View Overview</Text>
-            </Pressable>
-          </View>
+          <Pressable onPress={onViewOverview}>
+            <View style={styles.caclBtnContainer}>
+              <Text style={styles.calcBtn}>Done</Text>
+            </View>
+          </Pressable>
         </View>
 
         <Modal
@@ -266,6 +368,15 @@ export default function HomeScreen({ userName }) {
               setVisibility={setIsModalVisible}
               sessToken={sessionToken}
               setAddress={setDestination}
+              setSessToken={setSessionToken}
+            />
+          )}
+
+          {modalContext === MODAL_CONTEXT.STOP_LOC && (
+            <AddressSelection
+              setVisibility={setIsModalVisible}
+              sessToken={sessionToken}
+              setAddress={handleStopAddress}
               setSessToken={setSessionToken}
             />
           )}
@@ -361,6 +472,24 @@ const styles = StyleSheet.create({
     // backgroundColor: DARK_THEME.modalBackground,
   },
   safeArea: {
+    flex: 1,
+  },
+  flatListContainer: {
+    height: 300,
+  },
+  flatListContent: {
+    gap: 10,
+    paddingVertical: 10,
+  },
+  stopContainer: {
+    flexDirection: "row",
+    flexGrow: 1,
+    gap: 10,
+    // backgroundColor: "pink",
+  },
+  trashContainer: {
+    // backgroundColor: "red",
+    justifyContent: "center",
     flex: 1,
   },
 });

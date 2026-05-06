@@ -16,9 +16,17 @@ Date: 02-23-2026
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { DARK_THEME } from "../style/ColorScheme";
 
-function SelectField({ label, value, placeholder, handlePress, labelBgColor }) {
+function SelectField({
+  label,
+  value,
+  placeholder,
+  handlePress,
+  labelBgColor,
+  containerStyle,
+  isPlaceholderCenter = false,
+} = {}) {
   return (
-    <View style={styles.inputContainer}>
+    <View style={[styles.inputContainer, containerStyle]}>
       <Pressable onPress={handlePress}>
         <View
           style={[styles.labelContainer, { backgroundColor: labelBgColor }]}
@@ -26,7 +34,12 @@ function SelectField({ label, value, placeholder, handlePress, labelBgColor }) {
           <Text style={styles.inputLabel}>{label}</Text>
         </View>
 
-        <View style={styles.textContainer}>
+        <View
+          style={[
+            styles.textContainer,
+            isPlaceholderCenter && { alignItems: "center" },
+          ]}
+        >
           <Text style={value ? styles.textInput : styles.placeholder}>
             {value || placeholder}
           </Text>

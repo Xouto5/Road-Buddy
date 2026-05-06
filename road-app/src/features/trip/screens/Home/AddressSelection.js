@@ -6,7 +6,7 @@ Author: Bryan Cardeno
 Date: 02-26-2026 
 */
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import * as Crypto from "expo-crypto";
 import {
   View,
@@ -67,7 +67,10 @@ function AddressSelection({
     }
   };
 
-  const debouncedSearchText = debounce(onSearchTextChange, 600); // 0.6 second
+  const debouncedSearchText = useMemo(
+    () => debounce(onSearchTextChange, 600),
+    [],
+  ); // 0.6 second
 
   const renderPlaces = ({ item }) => {
     return (

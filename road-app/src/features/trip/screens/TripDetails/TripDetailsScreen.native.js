@@ -10,7 +10,6 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Polyline } from "react-native-maps";
 import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
@@ -73,17 +72,6 @@ export default function TripDetailsScreen({ route }) {
       gasPrice: estDetail.gasPrice,
       vehicle: car,
     }));
-
-    // TODO: CREATE STATE IN HOMESCREEN
-    // const {distance: dis, duration: dur, gasPrice: gas} = route.params.estDetail;
-    // setEstimate({
-    //   distance: dis,
-    //   duration: dur,
-    //   cost: (
-    //                   (dis/ vehicle.mpg_combined) *
-    //                   estimate.gasPrice
-    //                 ).toFixed(2)
-    // })
   }, [route.params]);
 
   return (
@@ -159,24 +147,33 @@ export default function TripDetailsScreen({ route }) {
 
         <BottomSheet
           ref={bottomSheetRef}
-          snapPoints={["35%"]}
+          snapPoints={["4%", "35%"]}
           index={0}
           backgroundStyle={styles.bottomSheet}
         >
           <BottomSheetView style={styles.bottomSheetContent}>
-            <Pressable>
+            <Pressable
+              style={styles.btnContainer}
+              onPress={() => console.log("add stop pressed")}
+            >
               <View style={styles.bottomSheetBtn}>
                 <Text style={styles.calcBtn}>Add Stop</Text>
               </View>
             </Pressable>
 
-            <Pressable>
+            <Pressable
+              style={styles.btnContainer}
+              onPress={() => console.log("save pressed")}
+            >
               <View style={styles.bottomSheetBtn}>
                 <Text style={styles.calcBtn}>Save Trip</Text>
               </View>
             </Pressable>
 
-            <Pressable>
+            <Pressable
+              style={styles.btnContainer}
+              onPress={() => console.log("discard pressed")}
+            >
               <View style={styles.bottomSheetBtn}>
                 <Text style={styles.calcBtn}>Discard Trip</Text>
               </View>
@@ -251,6 +248,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
     gap: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   bottomSheet: {
     backgroundColor: "rgba(125,125,125, 0.95)",
@@ -266,5 +265,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderLeftWidth: 0,
     borderRightWidth: 0,
+  },
+  btnContainer: {
+    // backgroundColor: "red",
+    width: "100%",
   },
 });
