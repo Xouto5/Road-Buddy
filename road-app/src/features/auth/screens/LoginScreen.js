@@ -63,6 +63,11 @@ export default function LoginScreen({ navigation }) {
     console.log("Logging in with:", username, password);
     
     if (checkIfUserSignedIn() == false) {
+      console.log(checkIfUserSignedIn());
+      console.log("yippe");
+      const popupElement = document.getElementById("my-dialog");
+      popupElement.showModal();
+      
       setFailedAttempts(prev => prev + 1);
       setModalVisible(true); 
     } else {

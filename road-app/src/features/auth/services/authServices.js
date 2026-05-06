@@ -1,5 +1,5 @@
 import { auth } from "../../../core/firebase/firebaseConfig";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword , sendEmailVerification, sendPasswordResetEmail} from "firebase/auth";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { getAuth } from "firebase/auth";
 import { signOut } from "firebase/auth";
@@ -58,6 +58,7 @@ export async function loginUser(email, password) {
   //         // ...
   //     }
   // });
+  auth.currentUser.reload();
   return true;
 }
 
@@ -83,3 +84,29 @@ export function logOut() {
       // An error happened.
     });
 }
+
+export function verifyEmail(){
+  sendEmailVerification(auth.currentUser)
+}
+
+export function isUserVerified(){
+  const auth = getAuth();
+  return auth.currentUser.emailVerified
+}
+
+export function callReset(){
+  const auth = getAuth();
+  sendPasswordResetEmail(auth, auth.currentUser.email)
+    .then(() => {
+      // Password reset email sent!
+     // ..
+     logOut()
+  })
+  .catch((error) => {
+    const errorCode = error.code;
+    const errorMessage = error.message;
+    console.log(errorMessage)
+  });
+}
+
+

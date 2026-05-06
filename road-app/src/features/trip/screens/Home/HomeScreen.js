@@ -15,11 +15,12 @@ Author: Joshua Swineford
 Date: 04-29-2026
 */
 
-import { View, Text, StyleSheet, Pressable, Modal, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
+import { verifyEmail, isUserVerified } from "../../../auth/services/authServices";
 import * as Location from "expo-location";
 
 import {
@@ -70,7 +71,25 @@ export default function HomeScreen({ userName }) {
   const [locationError, setLocationError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
 
-  /*const onQuickCalc = async () => {
+  if(!isUserVerified){
+    Alert.alert(
+      'Email is not verified',
+      'Please verify your email. Check your email for an existing link, or click send again to receive a new one',
+      [
+        {
+          text: 'Okay', 
+        },
+        {
+          text: 'Send Again', 
+          onPress: () => verifyEmail
+        },
+      ],
+      {cancelable: false},
+      );
+  }
+
+
+  const onQuickCalc = async () => {
     const findCheapest = (ar) => {
       let val = 999;
 
