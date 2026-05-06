@@ -59,21 +59,24 @@ export default function LoginScreen({ navigation }) {
   };
 
   async function loginAsync(username, password) {
-    await loginUser(username, password);
-    console.log("Logging in with:", username, password);
-    
-    if (checkIfUserSignedIn() == false) {
-      console.log(checkIfUserSignedIn());
-      console.log("yippe");
-      const popupElement = document.getElementById("my-dialog");
-      popupElement.showModal();
-      
+    try {
+      const result = await loginUser(username, password);
+
+      console.log("Login result:", result);
+
+      if (!result || result.success === false) {
+        setFailedAttempts(prev => prev + 1);
+        setModalVisible(true);
+      } else {
+        setFailedAttempts(0);
+        navigation.navigate("TempMenu");
+      }
+
+    } catch (error) {
+      console.log("Login error:", error);
+
       setFailedAttempts(prev => prev + 1);
-      setModalVisible(true); 
-    } else {
-      // NEW: Reset failed attempts on success
-      setFailedAttempts(0);
-      window.location.href = "TempMenu.js";
+      setModalVisible(true);
     }
   }
 
