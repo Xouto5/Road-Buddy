@@ -7,7 +7,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const RECENT_LOCATIONS_KEY = "recent_locations";
-const MAX_RECENT_LOCATIONS = 5;
+const MAX_RECENT_LOCATIONS = 3;
 
 export const getRecentLocations = async () => {
   try {
