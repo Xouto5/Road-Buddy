@@ -6,7 +6,15 @@ Author: Bryan Cardeno
 Date: 03-12-2026
 */
 
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  Platform,
+  Linking,
+} from "react-native";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -37,18 +45,50 @@ export default function TripDetailsScreen({ route }) {
     // Need to look into it more
   });
 
+  const openInMaps = () => {
+    if (polylines.length === 0) return;
+
+    const origin = { ...polylines[0] };
+    const destination = { ...polylines[polylines.length - 1] };
+
+    let url;
+
+    if (Platform.OS === "ios") {
+      url = `http://maps.apple.com/?saddr=${originLatLng.latitude},${originLatLng.longitude}&daddr=${destLatLng.latitude},${destLatLng.longitude}&dirflg=d`;
+    } else {
+      url = `google.navigation:q=${destination.latitude},${destination.longitude}&mode=d`;
+    }
+
+    Linking.openURL(url);
+  };
+
   const bottomSheetRef = useRef(null);
 
-  const handleSheetChanges = useCallback((index) => {
-    // console.log("handle sheet changes", index);
-  }, []);
+  const handleSheetChanges = useCallback((index) => {}, []);
+
+  const constructEstimateObject = () => {
+    const {
+      distance,
+      duration,
+      startName,
+      destinationName,
+      gasPrice,
+      vehicle,
+    } = estimate;
+
+    return {
+      startLocation: startName,
+      destination: destinationName,
+      vehicle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      mpg: vehicle.mpg_combined.toString(),
+      gasPrice: gasPrice.toString(),
+    };
+  };
 
   useEffect(() => {
     if (!route.params) return;
 
     const { estDetail, pointA, pointB, car } = route.params;
-
-    console.log(route.params);
 
     const decoded = decode(
       route?.params?.estDetail?.polylines?.encodedPolyline,
@@ -121,7 +161,13 @@ export default function TripDetailsScreen({ route }) {
           </View>
 
           <View style={styles.buttonContainer}>
-            <Fontisto name="more-v" size={30} color="#fafafa" />
+            <Pressable
+              onPress={() =>
+                navigation.navigate("Estimate", constructEstimateObject())
+              }
+            >
+              <Fontisto name="more-v" size={30} color="#fafafa" />
+            </Pressable>
           </View>
         </View>
 
@@ -147,17 +193,14 @@ export default function TripDetailsScreen({ route }) {
 
         <BottomSheet
           ref={bottomSheetRef}
-          snapPoints={["4%", "35%"]}
+          snapPoints={["4%", "40%"]}
           index={0}
           backgroundStyle={styles.bottomSheet}
         >
           <BottomSheetView style={styles.bottomSheetContent}>
-            <Pressable
-              style={styles.btnContainer}
-              onPress={() => console.log("add stop pressed")}
-            >
+            <Pressable style={styles.btnContainer} onPress={openInMaps}>
               <View style={styles.bottomSheetBtn}>
-                <Text style={styles.calcBtn}>Add Stop</Text>
+                <Text style={styles.calcBtn}>Open in Maps</Text>
               </View>
             </Pressable>
 
@@ -167,6 +210,14 @@ export default function TripDetailsScreen({ route }) {
             >
               <View style={styles.bottomSheetBtn}>
                 <Text style={styles.calcBtn}>Save Trip</Text>
+              </View>
+            </Pressable>
+            <Pressable
+              style={styles.btnContainer}
+              onPress={() => navigation.navigate("Plan")}
+            >
+              <View style={styles.bottomSheetBtn}>
+                <Text style={styles.calcBtn}>Add Stop</Text>
               </View>
             </Pressable>
 

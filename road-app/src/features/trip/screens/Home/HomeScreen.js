@@ -87,11 +87,6 @@ export default function HomeScreen({ userName }) {
     return val;
   };
   const onQuickCalc = async () => {
-    // if (!startLocation || !destination) {
-    //   console.log("invalid start or destination");
-    //   return;
-    // }
-
     if (!longLat) {
       console.log("long lat invalid", longLat);
       return;
@@ -100,9 +95,11 @@ export default function HomeScreen({ userName }) {
     const filterStations = gasStations.filter((gas) => gas.fuelOptions);
     const cheapest = findCheapest(filterStations);
 
-    const intermediates = stops.map((stop) => {
-      placeId: stop.placeId;
-    });
+    const intermediates = stops
+      .filter((stop) => stop.placeId)
+      .map((stop) => ({
+        placeId: stop.placeId,
+      }));
 
     const routeDistance = await getGoogleRoutes(
       startLocation.placePrediction.placeId,
@@ -123,9 +120,7 @@ export default function HomeScreen({ userName }) {
     return result;
   };
 
-  const onSave = () => {
-    console.log("save pressed");
-  };
+  const onSave = () => {};
 
   const onViewOverview = async () => {
     if (!startLocation || !destination || !vehicle) return;
@@ -186,9 +181,6 @@ export default function HomeScreen({ userName }) {
   };
 
   const handleStopAddress = (item) => {
-    console.log("item", item);
-    console.log("selected stop", selectedStop);
-
     setStops((prevStops) => {
       const newStops = prevStops.map((stop) => {
         if (stop.id !== selectedStop) return stop;
@@ -205,8 +197,6 @@ export default function HomeScreen({ userName }) {
   };
 
   const onTrashPress = (id) => {
-    console.log(id);
-
     setStops((prevStops) => {
       const newStops = prevStops.filter((stop) => stop.id != id);
 
@@ -278,9 +268,6 @@ export default function HomeScreen({ userName }) {
               placeholder="Add a stop +"
               handlePress={handleAddStop}
               labelBgColor={DARK_THEME.primaryBackground}
-              value={
-                vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
-              }
               isPlaceholderCenter={true}
             />
 
@@ -299,7 +286,7 @@ export default function HomeScreen({ userName }) {
               </View>
             </Pressable> */}
 
-            {estimate && (
+            {/* {estimate && (
               <View style={styles.quickEstimateContainer}>
                 <View style={styles.estimateDetail}>
                   <View style={styles.estimateRow}>
@@ -333,7 +320,7 @@ export default function HomeScreen({ userName }) {
                   </View>
                 </Pressable>
               </View>
-            )}
+            )} */}
           </View>
           <Pressable onPress={onViewOverview}>
             <View style={styles.caclBtnContainer}>

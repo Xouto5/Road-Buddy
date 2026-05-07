@@ -179,6 +179,7 @@ export const getGoogleRoutes = async (originId, destinationId, stops) => {
         intermediates: stops,
         travelMode: "DRIVE",
         regionCode: "us",
+        polylineEncoding: "ENCODED_POLYLINE",
       }),
     });
 
