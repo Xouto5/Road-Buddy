@@ -15,13 +15,14 @@ Author: Joshua Swineford
 Date: 04-29-2026
 */
 
-import { View, Text, StyleSheet, Pressable, Modal, Alert, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal, Alert, TouchableOpacity, TextInput, Keyboard, TouchableWithoutFeedback, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
 import { verifyEmail, isUserVerified } from "../../../auth/services/authServices";
 import * as Location from "expo-location";
+import { getRecentLocations } from "../../services/recentLocationService";
 
 import {
   getGoogleDistance,
@@ -52,6 +53,17 @@ export default function HomeScreen({ userName }) {
     CAR_SELECT: "vehicle",
   };
 
+  const GOOGLE_PLACES_ENDPOINT = "https://places.googleapis.com/v1/places:autocomplete";
+
+  const AUTOCOMPLETE_FIELD_MASK = [
+    "suggestions.placePrediction.placeId",
+    "suggestions.placePrediction.text.text",
+  ].join(",");
+
+  const PLACES_API_KEY =
+    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
+    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID;
+
   const navigation = useNavigation();
 
   const auth = getAuth();
@@ -60,6 +72,7 @@ export default function HomeScreen({ userName }) {
   const [startLocation, setStartLocation] = useState("");
   const [destination, setDestination] = useState("");
   const [vehicle, setVehicle] = useState("");
+  const [mpg, setMpg] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalContext, setModalContext] = useState(null);
   const [saveModalVisible, setSaveModalVisible] = useState(false);
@@ -70,6 +83,15 @@ export default function HomeScreen({ userName }) {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
+  const [startSuggestions, setStartSuggestions] = useState([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState([]);
+  const [startAutocompleteLoading, setStartAutocompleteLoading] = useState(false);
+  const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] = useState(false);
+  const [recentLocations, setRecentLocations] = useState([]);
+  const [activeLocationField, setActiveLocationField] = useState(null);
+
+  const debounceRef = useRef(null);
+  const sessionTokenRef = useRef(`home-${Date.now()}`);
 
   if(!isUserVerified){
     Alert.alert(
@@ -276,7 +298,10 @@ export default function HomeScreen({ userName }) {
             },
           },
         },
-        car: vehicle,
+        car: {
+          label: vehicle,
+          mpg_combined: Number(mpg) || 25,
+        },
       });
     } catch (error) {
       console.error("Start trip error:", error);
@@ -316,6 +341,179 @@ export default function HomeScreen({ userName }) {
     setIsModalVisible(true);
   };
 
+  const handleAddressTyping = (field, text) => {
+    const typedLocation = {
+      placePrediction: {
+        text: {
+          text,
+        },
+      },
+    };
+
+    if (field === "start") {
+      setStartLocation(typedLocation);
+      setLocationError("");
+      setValidationErrors((e) => ({ ...e, startLocation: undefined }));
+    } else {
+      setDestination(typedLocation);
+      setValidationErrors((e) => ({ ...e, destination: undefined }));
+    }
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(() => {
+      handleAutocompleteLookup(field, text);
+    }, 400);
+  };
+
+  const handleAutocompleteLookup = async (field, rawText) => {
+    const text = (rawText || "").trim();
+
+    if (text.length < 3) {
+      if (field === "start") {
+        setStartSuggestions([]);
+      } else {
+        setDestinationSuggestions([]);
+      }
+      return;
+    }
+
+    if (field === "start") {
+      setStartAutocompleteLoading(true);
+    } else {
+      setDestinationAutocompleteLoading(true);
+    }
+
+    try {
+      const response = await fetch(GOOGLE_PLACES_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": PLACES_API_KEY,
+          "X-Goog-FieldMask": AUTOCOMPLETE_FIELD_MASK,
+        },
+        body: JSON.stringify({
+          input: text,
+          sessionToken: sessionTokenRef.current,
+          includedRegionCodes: ["us"],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Autocomplete request failed (${response.status})`);
+      }
+
+      const result = await response.json();
+      const suggestions = result?.suggestions || [];
+
+      if (field === "start") {
+        setStartSuggestions(suggestions);
+      } else {
+        setDestinationSuggestions(suggestions);
+      }
+    } catch (error) {
+      console.log(error);
+
+      if (field === "start") {
+        setStartSuggestions([]);
+      } else {
+        setDestinationSuggestions([]);
+      }
+    } finally {
+      if (field === "start") {
+        setStartAutocompleteLoading(false);
+      } else {
+        setDestinationAutocompleteLoading(false);
+      }
+    }
+  };
+
+  const handleSelectSuggestion = async (field, suggestion) => {
+    const selectedText = suggestion?.placePrediction?.text?.text || "";
+
+    if (field === "start") {
+      setStartLocation(suggestion);
+      setStartSuggestions([]);
+    } else {
+      setDestination(suggestion);
+      setDestinationSuggestions([]);
+    }
+
+    await saveRecentLocation({
+      placeId: suggestion?.placePrediction?.placeId || null,
+      description: selectedText,
+      type: "place",
+    });
+
+    await refreshRecentLocations();
+
+    setActiveLocationField(null);
+  };
+
+  const getFilteredRecents = (field) => {
+    const text =
+      field === "start"
+        ? startLocation?.placePrediction?.text?.text || ""
+        : destination?.placePrediction?.text?.text || "";
+
+    if (text.trim().length === 0) {
+      return recentLocations.slice(0, 3);
+    }
+
+    return recentLocations
+      .filter((item) =>
+        item.description?.toLowerCase().includes(text.toLowerCase())
+      )
+      .slice(0, 3);
+  };
+
+  const handleSelectRecentLocation = (field, item) => {
+    const selectedLocation =
+      item.type === "current_location"
+        ? {
+            placePrediction: {
+              text: {
+                text: item.description,
+              },
+            },
+            coordinates: {
+              latitude: item.latitude,
+              longitude: item.longitude,
+            },
+            isCurrentLocation: true,
+          }
+        : {
+            placePrediction: {
+              placeId: item.placeId,
+              text: {
+                text: item.description,
+              },
+            },
+          };
+
+    if (field === "start") {
+      setStartLocation(selectedLocation);
+      setStartSuggestions([]);
+    } else {
+      setDestination(selectedLocation);
+      setDestinationSuggestions([]);
+    }
+
+    Keyboard.dismiss();
+    setActiveLocationField(null);
+  };
+
+  const refreshRecentLocations = async () => {
+    const recents = await getRecentLocations();
+    setRecentLocations(recents);
+  };
+
+  useEffect(() => {
+    refreshRecentLocations();
+  }, []);
+
   useEffect(() => {
     if (!startLocation) return;
 
@@ -348,14 +546,30 @@ export default function HomeScreen({ userName }) {
       }
     };
 
-    getLongLat();
-}, [startLocation]);
+      getLongLat();
+  }, [startLocation]);
 
   useEffect(() => {
     if (!startLocation || !destination) return;
   }, [startLocation, destination]);
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const loadRecents = async () => {
+      const recents = await getRecentLocations();
+      setRecentLocations(recents);
+    };
+
+    loadRecents();
+  }, []);
+
   return (
+    
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <View style={styles.container}>
         <View style={styles.screenTitle}>
@@ -363,107 +577,217 @@ export default function HomeScreen({ userName }) {
           <Text style={styles.title}>{user?.email}</Text>
         </View>
 
-        <View style={styles.contentContainer}>
-          <View style={styles.contents}>
-            <Text style={styles.welcomeMsg}>Where do you want to go?</Text>
+        <ScrollView
+          style={styles.formScroll}
+          contentContainerStyle={styles.formScrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.contentContainer}>
+            <View style={styles.contents}>
+              <Text style={styles.welcomeMsg}>Where do you want to go?</Text>
 
-            <View style={styles.locationRow}>
-              <View style={{ flex: 1 }}>
-                <SelectField
-                  label="Start Location"
-                  placeholder="Enter starting location"
-                  handlePress={onStartLocationChange}
-                  labelBgColor={DARK_THEME.primaryBackground}
-                  value={startLocation?.placePrediction?.text?.text || ""}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.locationButton, locationLoading && styles.locationButtonDisabled]}
-                onPress={handleUseMyLocation}
-                disabled={locationLoading}
-              >
-                <Text style={styles.locationButtonText}>
-                  {locationLoading ? "Locating…" : "Use my location"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-
-            <SelectField
-                label="Destination"
-                placeholder="Enter destination"
-                handlePress={onDestinationChange}
-                labelBgColor={DARK_THEME.primaryBackground}
-                value={destination?.placePrediction?.text?.text || ""}
-              />
-
-            <SelectField
-              label="Vehicle"
-              placeholder="Select a vehicle"
-              handlePress={onSelectVehicle}
-              labelBgColor={DARK_THEME.primaryBackground}
-              value={
-                vehicle
-                  ? `${vehicle.year ?? ""} ${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim()
-                  : ""
-              }
-            />
-            {/*
-            <Pressable onPress={onQuickCalc}>
-              <View style={styles.caclBtnContainer}>
-                <Text style={styles.calcBtn}>Quick calculate</Text>
-              </View>
-            </Pressable>
-            
-
-            {estimate && (
-              <View style={styles.quickEstimateContainer}>
-                <View style={styles.estimateDetail}>
-                  <View style={styles.estimateRow}>
-                    <Text style={styles.estimateLabel}>Distance: </Text>
-                    <Text style={styles.estimateData}>
-                      {Math.ceil(estimate.distance)} mi
-                    </Text>
+              <View style={styles.startLocationBlock}>
+                <View style={styles.locationRow}>
+                  <View style={styles.locationInputWrapper}>
+                    <Text style={styles.inputLabel}>Start Location</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter starting location"
+                      placeholderTextColor={DARK_THEME.placeholder}
+                      value={startLocation?.placePrediction?.text?.text || ""}
+                      onFocus={() => setActiveLocationField("start")}
+                      onBlur={() => {
+                        setTimeout(() => setActiveLocationField(null), 250);
+                      }}
+                      onChangeText={(text) => {
+                        setActiveLocationField("start");
+                        handleAddressTyping("start", text);
+                      }}
+                    />
                   </View>
-                  <View style={styles.estimateRow}>
-                    <Text style={styles.estimateLabel}>Estimated Cost : </Text>
-                    <Text style={styles.estimateData}>
-                      ${" "}
-                      {calcGasCost(
-                        estimate.distance,
-                        vehicle.mpg_combined,
-                        estimate.gasPrice,
-                      )}
+
+                  <TouchableOpacity
+                    style={[styles.locationButton, locationLoading && styles.locationButtonDisabled]}
+                    onPress={handleUseMyLocation}
+                    disabled={locationLoading}
+                  >
+                    <Text style={styles.locationButtonText}>
+                      {locationLoading ? "Locating…" : "Use my location"}
                     </Text>
-                  </View>
-                  <View style={styles.estimateRow}>
-                    <Text style={styles.estimateLabel}>ETA: </Text>
-                    <Text style={styles.estimateData}>
-                      {Math.ceil(estimate.duration)} min
-                    </Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
 
-                <Pressable onPress={onSave}>
-                  <View style={styles.saveBtnContainer}>
-                    <Text style={styles.calcBtn}>Save</Text>
+                {activeLocationField === "start" &&
+                  getFilteredRecents("start").length > 0 && (
+                    <View style={styles.recentBox}>
+                      {getFilteredRecents("start").map((item, index) => (
+                        <TouchableOpacity
+                          key={`${item.placeId || item.description}-${index}`}
+                          style={styles.recentItem}
+                          onPressIn={() => handleSelectRecentLocation("start", item)}
+                        >
+                          <Text style={styles.recentLabel}>Recent</Text>
+                          <Text style={styles.recentText}>{item.description}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                {startSuggestions.length > 0 && (
+                  <View style={styles.fullWidthSuggestionsBox}>
+                    {startSuggestions.slice(0, 5).map((item, index) => (
+                      <TouchableOpacity
+                        key={item?.placePrediction?.placeId || index}
+                        style={styles.suggestionItem}
+                        onPress={() => handleSelectSuggestion("start", item)}
+                      >
+                        <Text style={styles.suggestionText}>
+                          {item?.placePrediction?.text?.text}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
-                </Pressable>
+                )}
               </View>
-            )} */}
-          </View>
 
-          <View style={styles.bottomButtonRow}>
-            <Pressable style={styles.startTripButton} onPress={handleStartTrip}>
-              <Text style={styles.startTripText}>Start Trip</Text>
-            </Pressable>
 
-            <Pressable style={styles.saveTripButton} onPress={onSave}>
-              <Text style={styles.saveTripText}>Save Trip</Text>
-            </Pressable>
+              <View>
+                <Text style={styles.inputLabel}>Destination</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter destination"
+                  placeholderTextColor={DARK_THEME.placeholder}
+                  value={destination?.placePrediction?.text?.text || ""}
+                  onFocus={() => setActiveLocationField("destination")}
+                  onBlur={() => {
+                    setTimeout(() => setActiveLocationField(null), 250);
+                  }}
+                  onChangeText={(text) => {
+                    setActiveLocationField("destination");
+                    handleAddressTyping("destination", text);
+                  }}
+                />
+
+                {activeLocationField === "destination" &&
+                  getFilteredRecents("destination").length > 0 && (
+                    <View style={styles.recentBox}>
+                      {getFilteredRecents("destination").map((item, index) => (
+                        <TouchableOpacity
+                          key={`${item.placeId || item.description}-${index}`}
+                          style={styles.recentItem}
+                          onPressIn={() => handleSelectRecentLocation("destination", item)}
+                        >
+                          <Text style={styles.recentLabel}>Recent</Text>
+                          <Text style={styles.recentText}>{item.description}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                {destinationAutocompleteLoading ? (
+                  <Text style={styles.helperText}>Loading suggestions...</Text>
+                ) : null}
+
+                {destinationSuggestions.length > 0 ? (
+                  <View style={styles.suggestionsBox}>
+                    {destinationSuggestions.slice(0, 5).map((item, idx) => (
+                      <TouchableOpacity
+                        key={
+                          item?.placePrediction?.placeId ||
+                          `${item?.placePrediction?.text?.text || "place"}-${idx}`
+                        }
+                        style={styles.suggestionItem}
+                        onPress={() => handleSelectSuggestion("destination", item)}
+                      >
+                        <Text style={styles.suggestionText}>
+                          {item?.placePrediction?.text?.text}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.vehicleRow}>
+                <View style={styles.vehicleField}>
+                  <Text style={styles.inputLabel}>Vehicle</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter vehicle"
+                    placeholderTextColor={DARK_THEME.placeholder}
+                    value={vehicle}
+                    onChangeText={setVehicle}
+                  />
+                </View>
+
+                <View style={styles.mpgField}>
+                  <Text style={styles.inputLabel}>MPG</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="28"
+                    placeholderTextColor={DARK_THEME.placeholder}
+                    value={mpg}
+                    onChangeText={setMpg}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+              {/*
+              <Pressable onPress={onQuickCalc}>
+                <View style={styles.caclBtnContainer}>
+                  <Text style={styles.calcBtn}>Quick calculate</Text>
+                </View>
+              </Pressable>
+              
+
+              {estimate && (
+                <View style={styles.quickEstimateContainer}>
+                  <View style={styles.estimateDetail}>
+                    <View style={styles.estimateRow}>
+                      <Text style={styles.estimateLabel}>Distance: </Text>
+                      <Text style={styles.estimateData}>
+                        {Math.ceil(estimate.distance)} mi
+                      </Text>
+                    </View>
+                    <View style={styles.estimateRow}>
+                      <Text style={styles.estimateLabel}>Estimated Cost : </Text>
+                      <Text style={styles.estimateData}>
+                        ${" "}
+                        {calcGasCost(
+                          estimate.distance,
+                          vehicle.mpg_combined,
+                          estimate.gasPrice,
+                        )}
+                      </Text>
+                    </View>
+                    <View style={styles.estimateRow}>
+                      <Text style={styles.estimateLabel}>ETA: </Text>
+                      <Text style={styles.estimateData}>
+                        {Math.ceil(estimate.duration)} min
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Pressable onPress={onSave}>
+                    <View style={styles.saveBtnContainer}>
+                      <Text style={styles.calcBtn}>Save</Text>
+                    </View>
+                  </Pressable>
+                </View>
+              )} */}
+            </View>
+
+            <View style={styles.bottomButtonRow}>
+              <Pressable style={styles.startTripButton} onPress={handleStartTrip}>
+                <Text style={styles.startTripText}>Start Trip</Text>
+              </Pressable>
+
+              <Pressable style={styles.saveTripButton} onPress={onSave}>
+                <Text style={styles.saveTripText}>Save Trip</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </ScrollView>
 
         {/* render location and car select modals */}
         <Modal
@@ -569,9 +893,12 @@ const styles = StyleSheet.create({
   },
   locationRow: {
     flexDirection: "row",
-    alignItems: "stretch",
+    alignItems: "center",
     gap: 10,
     marginBottom: 6,
+  },
+  locationInputWrapper: {
+    flex: 1,
   },
   overviewContainer: {
     justifyContent: "flex-end",
@@ -642,11 +969,23 @@ const styles = StyleSheet.create({
   },
   locationButton: {
     backgroundColor: DARK_THEME.primaryText,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    minHeight: 52,
+    minHeight: 56,
+    marginBottom: 0,
+    marginTop: 28,
+  },
+  fullWidthSuggestionsBox: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder,
+    borderRadius: 10,
+    overflow: "hidden",
+    marginTop: 6,
+    marginBottom: 10,
+    backgroundColor: DARK_THEME.modalBackground,
   },
   locationButtonDisabled: {
     opacity: 0.5,
@@ -678,7 +1017,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-
+  startLocationBlock: {
+    width: "100%",
+  },
   saveModalTitle: {
     color: DARK_THEME.primaryText,
     fontSize: 20,
@@ -704,7 +1045,121 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 15,
   },
+  inputLabel: {
+    color: DARK_THEME.primaryText,
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+    color: DARK_THEME.primaryText,
+    fontSize: 16,
+    minHeight: 52,
+  },
+
+  suggestionsBox: {
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder,
+    borderRadius: 10,
+    overflow: "hidden",
+    marginTop: 6,
+    backgroundColor: DARK_THEME.modalBackground,
+  },
+
+  suggestionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: DARK_THEME.primaryBorder,
+  },
+
+  suggestionText: {
+    color: DARK_THEME.primaryText,
+    fontSize: 14,
+  },
+  helperText: {
+    color: DARK_THEME.placeholder,
+    fontSize: 12,
+    marginTop: 6,
+    marginBottom: 8,
+  },
+
+  suggestionsBox: {
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder,
+    borderRadius: 10,
+    overflow: "hidden",
+    marginTop: 6,
+    marginBottom: 10,
+    backgroundColor: DARK_THEME.modalBackground,
+  },
+
+  suggestionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: DARK_THEME.primaryBorder,
+  },
+
+  suggestionText: {
+    color: DARK_THEME.primaryText,
+    fontSize: 14,
+  },
+  vehicleRow: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+  },
+
+  vehicleField: {
+    flex: 3,
+  },
+
+  mpgField: {
+    flex: 1,
+  },
+  recentBox: {
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder,
+    borderRadius: 10,
+    overflow: "hidden",
+    marginTop: 6,
+    marginBottom: 10,
+    backgroundColor: DARK_THEME.modalBackground,
+  },
+
+  recentItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: DARK_THEME.primaryBorder,
+  },
+
+  recentLabel: {
+    color: "#93C5FD",
+    fontSize: 12,
+    fontWeight: "bold",
+    marginBottom: 3,
+  },
+
+  recentText: {
+    color: DARK_THEME.primaryText,
+    fontSize: 14,
+  },
   safeArea: {
     flex: 1,
+  },
+  formScroll: {
+    flex: 1,
+  },
+
+  formScrollContent: {
+    flexGrow: 1,
   },
 });
