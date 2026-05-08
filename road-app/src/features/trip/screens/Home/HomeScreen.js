@@ -21,11 +21,11 @@ import {
   StyleSheet,
   Pressable,
   Modal,
-  FlatList,
   Alert,
   TouchableOpacity,
   Keyboard,
   ScrollView,
+  TextInput,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useState, useEffect, useRef } from "react";
@@ -117,6 +117,16 @@ export default function HomeScreen({ userName }) {
   const debounceRef = useRef(null);
   const sessionTokenRef = useRef(`home-${Date.now()}`);
   const emailVerificationAlertShownRef = useRef(false);
+
+  const resetSessionToken = () => {
+    const newToken = Crypto.randomUUID();
+    sessionTokenRef.current = newToken;
+    setSessionToken(newToken);
+  };
+
+  const getLocationText = (location) => {
+    return location?.placePrediction?.text?.text || "";
+  };
 
   useEffect(() => {
     if (emailVerificationAlertShownRef.current) return;
@@ -268,6 +278,8 @@ export default function HomeScreen({ userName }) {
       };
 
       setStartLocation(currentLocationData);
+      setActiveLocationField(null);
+      Keyboard.dismiss();
 
       await saveRecentLocation({
         placeId: null,
@@ -276,6 +288,8 @@ export default function HomeScreen({ userName }) {
         longitude: pos.coords.longitude,
         type: "current_location",
       });
+
+      await refreshRecentLocations();
 
       setValidationErrors((prev) => ({
         ...prev,
@@ -413,16 +427,6 @@ export default function HomeScreen({ userName }) {
     setIsModalVisible(true);
   };
 
-  const onStartLocationChange = () => {
-    setModalContext(MODAL_CONTEXT.START_LOC);
-    setIsModalVisible(true);
-  };
-
-  const onDestinationChange = () => {
-    setModalContext(MODAL_CONTEXT.END_LOC);
-    setIsModalVisible(true);
-  };
-
   const handleAddressTyping = (field, text) => {
     const typedLocation = {
       placePrediction: {
@@ -459,6 +463,11 @@ export default function HomeScreen({ userName }) {
       } else {
         setDestinationSuggestions([]);
       }
+      return;
+    }
+
+    if (!PLACES_API_KEY) {
+      console.log("Missing Google Places API key");
       return;
     }
 
@@ -518,9 +527,11 @@ export default function HomeScreen({ userName }) {
     if (field === "start") {
       setStartLocation(suggestion);
       setStartSuggestions([]);
+      setValidationErrors((e) => ({ ...e, startLocation: undefined }));
     } else {
       setDestination(suggestion);
       setDestinationSuggestions([]);
+      setValidationErrors((e) => ({ ...e, destination: undefined }));
     }
 
     await saveRecentLocation({
@@ -531,14 +542,16 @@ export default function HomeScreen({ userName }) {
 
     await refreshRecentLocations();
 
+    resetSessionToken();
     setActiveLocationField(null);
+    Keyboard.dismiss();
   };
 
   const getFilteredRecents = (field) => {
     const text =
       field === "start"
-        ? startLocation?.placePrediction?.text?.text || ""
-        : destination?.placePrediction?.text?.text || "";
+        ? getLocationText(startLocation)
+        : getLocationText(destination);
 
     if (text.trim().length === 0) {
       return recentLocations.slice(0, 3);
@@ -578,18 +591,21 @@ export default function HomeScreen({ userName }) {
     if (field === "start") {
       setStartLocation(selectedLocation);
       setStartSuggestions([]);
+      setValidationErrors((e) => ({ ...e, startLocation: undefined }));
     } else {
       setDestination(selectedLocation);
       setDestinationSuggestions([]);
+      setValidationErrors((e) => ({ ...e, destination: undefined }));
     }
 
+    resetSessionToken();
     Keyboard.dismiss();
     setActiveLocationField(null);
   };
 
   const refreshRecentLocations = async () => {
     const recents = await getRecentLocations();
-    setRecentLocations(recents);
+    setRecentLocations(recents || []);
   };
 
   useEffect(() => {
@@ -691,6 +707,148 @@ export default function HomeScreen({ userName }) {
     </View>
   );
 
+  const renderLocationResults = (field) => {
+    if (activeLocationField !== field) return null;
+
+    const recents = getFilteredRecents(field);
+    const suggestions =
+      field === "start" ? startSuggestions : destinationSuggestions;
+    const loading =
+      field === "start"
+        ? startAutocompleteLoading
+        : destinationAutocompleteLoading;
+    const fieldText =
+      field === "start"
+        ? getLocationText(startLocation)
+        : getLocationText(destination);
+
+    return (
+      <View style={styles.resultsContainer}>
+        {recents.length > 0 ? (
+          <View style={styles.resultsBox}>
+            <Text style={styles.resultSectionTitle}>Recent</Text>
+            {recents.map((item, index) => (
+              <TouchableOpacity
+                key={`recent-${item.placeId || item.description}-${index}`}
+                style={styles.resultItem}
+                onPressIn={() => handleSelectRecentLocation(field, item)}
+              >
+                <Text style={styles.recentTag}>Recent</Text>
+                <Text style={styles.itemText}>{item.description}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+
+        {loading ? (
+          <Text style={styles.helperText}>Loading suggestions...</Text>
+        ) : null}
+
+        {suggestions.length > 0 ? (
+          <View style={styles.resultsBox}>
+            <Text style={styles.resultSectionTitle}>Suggestions</Text>
+            {suggestions.slice(0, 5).map((item, index) => (
+              <TouchableOpacity
+                key={
+                  item?.placePrediction?.placeId ||
+                  `suggestion-${field}-${index}`
+                }
+                style={styles.resultItem}
+                onPressIn={() => handleSelectSuggestion(field, item)}
+              >
+                <Text style={styles.suggestionText}>
+                  {item?.placePrediction?.text?.text}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+
+        {fieldText.trim().length > 2 &&
+        !loading &&
+        suggestions.length === 0 &&
+        recents.length === 0 ? (
+          <Text style={styles.helperText}>No locations found.</Text>
+        ) : null}
+      </View>
+    );
+  };
+
+  const renderLocationInput = (field) => {
+    const isStart = field === "start";
+    const label = isStart ? "Starting Location" : "Destination";
+    const placeholder = isStart
+      ? "Enter starting location"
+      : "Enter destination";
+    const value = isStart
+      ? getLocationText(startLocation)
+      : getLocationText(destination);
+
+    const inputContent = (
+      <View
+        style={
+          isStart ? styles.locationInputWrapper : styles.locationInputFull
+        }
+      >
+        <Text style={styles.inputLabel}>{label}</Text>
+        <TextInput
+          style={[
+            styles.input,
+            activeLocationField === field && styles.activeInput,
+            validationErrors[isStart ? "startLocation" : "destination"] &&
+              styles.inputError,
+          ]}
+          placeholder={placeholder}
+          placeholderTextColor={DARK_THEME.placeholder}
+          value={value}
+          onFocus={() => setActiveLocationField(field)}
+          onBlur={() => {
+            setTimeout(() => {
+              setActiveLocationField((current) =>
+                current === field ? null : current
+              );
+            }, 250);
+          }}
+          onChangeText={(text) => {
+            setActiveLocationField(field);
+            handleAddressTyping(field, text);
+          }}
+        />
+      </View>
+    );
+
+    return (
+      <View style={styles.locationInputBlock}>
+        {isStart ? (
+          <View style={styles.locationRow}>
+            {inputContent}
+
+            <TouchableOpacity
+              style={[
+                styles.locationButton,
+                locationLoading && styles.locationButtonDisabled,
+              ]}
+              onPress={handleUseMyLocation}
+              disabled={locationLoading}
+            >
+              <Text style={styles.locationButtonText}>
+                {locationLoading ? "Locating..." : "Use my location"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          inputContent
+        )}
+
+        {isStart && locationError ? (
+          <Text style={styles.helperText}>{locationError}</Text>
+        ) : null}
+
+        {renderLocationResults(field)}
+      </View>
+    );
+  };
+
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
@@ -714,52 +872,16 @@ export default function HomeScreen({ userName }) {
         >
           <View style={styles.contentContainer}>
             <View style={styles.contents}>
-              <View style={styles.locationRow}>
-                <View style={styles.locationInputWrapper}>
-                  <SelectField
-                    label="Starting Location"
-                    placeholder="Enter starting location"
-                    handlePress={onStartLocationChange}
-                    labelBgColor={DARK_THEME.primaryBackground}
-                    value={startLocation?.placePrediction?.text?.text || ""}
-                  />
-                </View>
+              {renderLocationInput("start")}
 
-                <TouchableOpacity
-                  style={[
-                    styles.locationButton,
-                    locationLoading && styles.locationButtonDisabled,
-                  ]}
-                  onPress={handleUseMyLocation}
-                  disabled={locationLoading}
-                >
-                  <Text style={styles.locationButtonText}>
-                    {locationLoading ? "Locating..." : "Use my location"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {locationError ? (
-                <Text style={styles.helperText}>{locationError}</Text>
-              ) : null}
-
-              <SelectField
-                label="Destination"
-                placeholder="Enter destination"
-                handlePress={onDestinationChange}
-                labelBgColor={DARK_THEME.primaryBackground}
-                value={destination?.placePrediction?.text?.text || ""}
-              />
+              {renderLocationInput("destination")}
 
               {stops.length > 0 && (
-                <FlatList
-                  style={styles.flatListContainer}
-                  contentContainerStyle={styles.flatListContent}
-                  data={stops}
-                  renderItem={renderStops}
-                  keyExtractor={(item) => item.id}
-                  scrollEnabled={true}
-                />
+                <View style={styles.stopsList}>
+                  {stops.map((item, index) => (
+                    <View key={item.id}>{renderStops({ item, index })}</View>
+                  ))}
+                </View>
               )}
 
               <SelectField
@@ -778,20 +900,19 @@ export default function HomeScreen({ userName }) {
                   typeof vehicle === "string"
                     ? vehicle
                     : vehicle
-                      ? `${vehicle.year || ""} ${vehicle.make || ""} ${
-                          vehicle.model || ""
-                        }`.trim()
-                      : ""
+                    ? `${vehicle.year || ""} ${vehicle.make || ""} ${
+                        vehicle.model || ""
+                      }`.trim()
+                    : ""
                 }
               />
-
-              {locationError ? (
-                <Text style={styles.helperText}>{locationError}</Text>
-              ) : null}
             </View>
 
             <View style={styles.bottomButtonRow}>
-              <Pressable style={styles.startTripButton} onPress={handleStartTrip}>
+              <Pressable
+                style={styles.startTripButton}
+                onPress={handleStartTrip}
+              >
                 <Text style={styles.startTripText}>Start Trip</Text>
               </Pressable>
 
@@ -876,7 +997,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: DARK_THEME.primaryBackground,
-    gap: 20,
   },
   screenTitle: {
     alignItems: "center",
@@ -885,22 +1005,22 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderLeftWidth: 0,
     borderRightWidth: 0,
-    height: 80,
+    height: 76,
     width: "90%",
     alignSelf: "center",
+    marginTop: 8,
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    flexGrow: 1,
-    justifyContent: "space-between",
+    paddingTop: 18,
+    paddingBottom: 28,
   },
   contents: {
-    gap: 20,
+    gap: 16,
   },
   title: {
     color: DARK_THEME.primaryText,
-    fontSize: 26,
+    fontSize: 24,
     textAlign: "center",
     flexWrap: "wrap",
     fontWeight: "bold",
@@ -912,14 +1032,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
     textAlign: "center",
   },
+  locationInputBlock: {
+    width: "100%",
+  },
   locationRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 10,
-    marginBottom: 6,
   },
   locationInputWrapper: {
     flex: 1,
+  },
+  locationInputFull: {
+    width: "100%",
+  },
+  activeInput: {
+    borderColor: "#93C5FD",
+  },
+  inputError: {
+    borderColor: "red",
+    borderWidth: 2,
   },
   overviewContainer: {
     justifyContent: "flex-end",
@@ -929,8 +1061,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 20,
-    marginTop: 20,
+    marginTop: 24,
+    marginBottom: 10,
   },
   startTripButton: {
     flex: 1,
@@ -995,12 +1127,14 @@ const styles = StyleSheet.create({
   },
   locationButton: {
     backgroundColor: DARK_THEME.primaryText,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    minHeight: 48,
+    minHeight: 52,
+    width: 96,
+    marginTop: 27,
   },
   fullWidthSuggestionsBox: {
     width: "100%",
@@ -1017,8 +1151,9 @@ const styles = StyleSheet.create({
   },
   locationButtonText: {
     color: DARK_THEME.primaryBackground,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "bold",
+    textAlign: "center",
   },
   textInput: {
     color: "#fafafa",
@@ -1080,6 +1215,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 52,
   },
+  resultsContainer: {
+    marginTop: 8,
+    gap: 8,
+  },
+  resultsBox: {
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: DARK_THEME.modalBackground || "#1e293b",
+  },
+  resultSectionTitle: {
+    color: "#93C5FD",
+    fontSize: 13,
+    fontWeight: "bold",
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  resultItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: DARK_THEME.primaryBorder,
+  },
   suggestionsBox: {
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
@@ -1096,6 +1256,10 @@ const styles = StyleSheet.create({
     borderBottomColor: DARK_THEME.primaryBorder,
   },
   suggestionText: {
+    color: DARK_THEME.primaryText,
+    fontSize: 14,
+  },
+  itemText: {
     color: DARK_THEME.primaryText,
     fontSize: 14,
   },
@@ -1131,7 +1295,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: DARK_THEME.primaryBorder,
   },
-  recentLabel: {
+  recentTag: {
     color: "#93C5FD",
     fontSize: 12,
     fontWeight: "bold",
@@ -1143,6 +1307,9 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  stopsList: {
+    gap: 10,
   },
   flatListContainer: {
     height: 300,
