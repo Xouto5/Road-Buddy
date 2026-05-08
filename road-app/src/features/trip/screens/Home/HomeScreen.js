@@ -1,9 +1,9 @@
 /*
-HomeScreen Component                      
+HomeScreen Component
 Default screen when authenticated.
 Prompts user for trip information and displays brief estimate.
 
-Author: Bryan Cardeno                               
+Author: Bryan Cardeno
 Date: 02-21-2026 
 
 Removed estimate function.
@@ -15,14 +15,28 @@ Author: Joshua Swineford
 Date: 04-29-2026
 */
 
-import { View, Text, StyleSheet, Pressable, Modal, FlatList, Alert, TouchableOpacity, TextInput, Keyboard, TouchableWithoutFeedback, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Modal,
+  FlatList,
+  Alert,
+  TouchableOpacity,
+  Keyboard,
+  ScrollView,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useState, useEffect, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
 import { verifyEmail, isUserVerified } from "../../../auth/services/authServices";
 import * as Location from "expo-location";
-import { getRecentLocations } from "../../services/recentLocationService";
+import {
+  getRecentLocations,
+  saveRecentLocation,
+} from "../../services/recentLocationService";
 
 import {
   getGoogleRoutes,
@@ -36,14 +50,12 @@ import { getAuth } from "firebase/auth";
 import VehicleSelection from "./VehicleSelection";
 import AddressSelection from "./AddressSelection";
 import SelectField from "../../../../shared/component/SelectField";
-import { saveRecentLocation } from "../../services/recentLocationService";
 
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 
 import {
   metersToMiles,
   secondsToMinutes,
-  calcGasCost,
 } from "../../../../shared/utility/utils";
 
 const createStopObject = () => ({
@@ -60,7 +72,8 @@ export default function HomeScreen({ userName }) {
     STOP_LOC: "stop",
   };
 
-  const GOOGLE_PLACES_ENDPOINT = "https://places.googleapis.com/v1/places:autocomplete";
+  const GOOGLE_PLACES_ENDPOINT =
+    "https://places.googleapis.com/v1/places:autocomplete";
 
   const AUTOCOMPLETE_FIELD_MASK = [
     "suggestions.placePrediction.placeId",
@@ -94,84 +107,124 @@ export default function HomeScreen({ userName }) {
   const [validationErrors, setValidationErrors] = useState({});
   const [startSuggestions, setStartSuggestions] = useState([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState([]);
-  const [startAutocompleteLoading, setStartAutocompleteLoading] = useState(false);
-  const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] = useState(false);
+  const [startAutocompleteLoading, setStartAutocompleteLoading] =
+    useState(false);
+  const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] =
+    useState(false);
   const [recentLocations, setRecentLocations] = useState([]);
   const [activeLocationField, setActiveLocationField] = useState(null);
 
   const debounceRef = useRef(null);
   const sessionTokenRef = useRef(`home-${Date.now()}`);
+  const emailVerificationAlertShownRef = useRef(false);
 
-  if(!isUserVerified){
+  useEffect(() => {
+    if (emailVerificationAlertShownRef.current) return;
+    if (!user) return;
+    if (isUserVerified()) return;
+
+    emailVerificationAlertShownRef.current = true;
+
     Alert.alert(
-      'Email is not verified',
-      'Please verify your email. Check your email for an existing link, or click send again to receive a new one',
+      "Email is not verified",
+      "Please verify your email. Check your email for an existing link, or click send again to receive a new one.",
       [
         {
-          text: 'Okay', 
+          text: "Okay",
         },
         {
-          text: 'Send Again', 
-          onPress: () => verifyEmail
+          text: "Send Again",
+          onPress: async () => {
+            const result = await verifyEmail();
+
+            if (result && result.success === false) {
+              Alert.alert(
+                "Verification Error",
+                result.error || "Could not send verification email."
+              );
+            }
+          },
         },
       ],
-      {cancelable: false},
-      );
-  }
-
+      { cancelable: false }
+    );
+  }, [user]);
 
   const findCheapest = (ar) => {
     let val = 999;
 
     ar.forEach((element) => {
-      const regular = element.fuelOptions.fuelPrices.filter(
-        (gasType) => gasType.type == "REGULAR_UNLEADED",
+      const regular = element?.fuelOptions?.fuelPrices?.find(
+        (gasType) => gasType.type === "REGULAR_UNLEADED"
       );
 
-      const wholePrice = parseInt(regular[0].price.units);
-      const decimal = parseInt(regular[0].price.nanos) / 1000000000;
+      if (!regular?.price) return;
 
+      const wholePrice = Number(regular.price.units || 0);
+      const decimal = Number(regular.price.nanos || 0) / 1000000000;
       const price = wholePrice + decimal;
 
-      if (price < val) val = price;
+      if (Number.isFinite(price) && price < val) {
+        val = price;
+      }
     });
 
-    return val;
+    return val === 999 ? 0 : val;
   };
+
   const onQuickCalc = async () => {
     if (!longLat) {
       console.log("long lat invalid", longLat);
       return;
     }
 
-    const filterStations = gasStations.filter((gas) => gas.fuelOptions);
-    const cheapest = findCheapest(filterStations);
+    if (
+      !startLocation?.placePrediction?.placeId ||
+      !destination?.placePrediction?.placeId
+    ) {
+      console.log("Missing start or destination placeId");
+      return;
+    }
 
-    const intermediates = stops
-      .filter((stop) => stop.placeId)
-      .map((stop) => ({
-        placeId: stop.placeId,
-      }));
+    try {
+      const filterStations = gasStations.filter((gas) => gas.fuelOptions);
+      const cheapest = findCheapest(filterStations);
 
-    const routeDistance = await getGoogleRoutes(
-      startLocation.placePrediction.placeId,
-      destination.placePrediction.placeId,
-      intermediates,
-    );
+      const intermediates = stops
+        .filter((stop) => stop.placeId)
+        .map((stop) => ({
+          placeId: stop.placeId,
+        }));
 
-    const { distanceMeters, duration, polyline } = routeDistance.routes[0];
+      const routeDistance = await getGoogleRoutes(
+        startLocation.placePrediction.placeId,
+        destination.placePrediction.placeId,
+        intermediates
+      );
 
-    const result = {
-      distance: Math.ceil(metersToMiles(distanceMeters)),
-      duration: Math.ceil(secondsToMinutes(duration)),
-      gasPrice: cheapest,
-      polylines: polyline,
-    };
+      const route = routeDistance?.routes?.[0];
 
-    setEstimate(result);
-    return result;
-    }));
+      if (!route) {
+        console.log("No route found");
+        return;
+      }
+
+      const { distanceMeters, duration, polyline } = route;
+
+      const result = {
+        distance: Math.ceil(metersToMiles(distanceMeters)),
+        duration: Math.ceil(secondsToMinutes(duration)),
+        gasPrice: cheapest,
+        polylines: polyline,
+      };
+
+      setEstimate(result);
+      return result;
+    } catch (error) {
+      console.error("Quick calc error:", error);
+    }
   };
+
   const handleUseMyLocation = async () => {
     try {
       setLocationLoading(true);
@@ -180,7 +233,9 @@ export default function HomeScreen({ userName }) {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== "granted") {
-        setLocationError("Location permission denied. Enable it in your device settings.");
+        setLocationError(
+          "Location permission denied. Enable it in your device settings."
+        );
         return;
       }
 
@@ -195,7 +250,9 @@ export default function HomeScreen({ userName }) {
 
       const formattedLocation = place
         ? [place.street, place.city, place.region].filter(Boolean).join(", ")
-        : `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+        : `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(
+            5
+          )}`;
 
       const currentLocationData = {
         placePrediction: {
@@ -234,58 +291,58 @@ export default function HomeScreen({ userName }) {
 
   const handleStartTrip = async () => {
     try {
-      const findCheapest = (ar) => {
-        let val = 999;
-
-        ar.forEach((element) => {
-          const regular = element.fuelOptions?.fuelPrices?.filter(
-            (gasType) => gasType.type === "REGULAR_UNLEADED"
-          );
-
-          if (!regular || regular.length === 0) return;
-
-          const wholePrice = parseInt(regular[0].price.units);
-          const decimal = parseInt(regular[0].price.nanos) / 1000000000;
-          const price = wholePrice + decimal;
-
-          if (price < val) val = price;
-        });
-
-        return val;
-      };
-
       if (!startLocation || !destination || !vehicle) {
-        console.log("Missing start location, destination, or vehicle");
+        Alert.alert(
+          "Missing Trip Info",
+          "Please select a starting location, destination, and vehicle."
+        );
         return;
       }
 
       if (!destination?.placePrediction?.placeId) {
-        console.log("Destination placeId missing");
+        Alert.alert("Missing Destination", "Please select a valid destination.");
+        return;
+      }
+
+      if (startLocation?.isCurrentLocation && startLocation?.coordinates) {
+        Alert.alert(
+          "Current Location Selected",
+          "Starting a trip from current location is not supported by this route service yet. Please select a saved place instead."
+        );
+        return;
+      }
+
+      if (!startLocation?.placePrediction?.placeId) {
+        Alert.alert(
+          "Missing Starting Location",
+          "Please select a valid starting location."
+        );
         return;
       }
 
       const filterStations = gasStations.filter((gas) => gas.fuelOptions);
       const cheapest = findCheapest(filterStations);
 
-      let routeDistance;
+      const intermediates = stops
+        .filter((stop) => stop.placeId)
+        .map((stop) => ({
+          placeId: stop.placeId,
+        }));
 
-      if (startLocation?.isCurrentLocation && startLocation?.coordinates) {
-        console.log("Current location selected as start.");
-        console.log("Your getGoogleDistance service currently needs a placeId-based start.");
-        return;
-      }
-
-      if (!startLocation?.placePrediction?.placeId) {
-        console.log("Start location placeId missing");
-        return;
-      }
-
-      routeDistance = await getGoogleDistance(
+      const routeDistance = await getGoogleRoutes(
         startLocation.placePrediction.placeId,
-        destination.placePrediction.placeId
+        destination.placePrediction.placeId,
+        intermediates
       );
 
-      const { distanceMeters, duration, polyline } = routeDistance.routes[0];
+      const route = routeDistance?.routes?.[0];
+
+      if (!route) {
+        Alert.alert("Route Error", "Could not calculate this route.");
+        return;
+      }
+
+      const { distanceMeters, duration, polyline } = route;
 
       const estDetail = {
         distance: Math.ceil(metersToMiles(distanceMeters)),
@@ -294,29 +351,41 @@ export default function HomeScreen({ userName }) {
         polylines: polyline,
       };
 
+      const vehicleLabel =
+        typeof vehicle === "string"
+          ? vehicle
+          : `${vehicle?.year || ""} ${vehicle?.make || ""} ${
+              vehicle?.model || ""
+            }`.trim();
+
       navigation.navigate("Overview", {
         estDetail,
         pointA: {
           placePrediction: {
             text: {
-              text: startLocation?.placePrediction?.text?.text || "Unknown start",
+              text:
+                startLocation?.placePrediction?.text?.text || "Unknown start",
             },
           },
         },
         pointB: {
           placePrediction: {
             text: {
-              text: destination?.placePrediction?.text?.text || "Unknown destination",
+              text:
+                destination?.placePrediction?.text?.text ||
+                "Unknown destination",
             },
           },
         },
         car: {
-          label: vehicle,
-          mpg_combined: Number(mpg) || 25,
+          ...(typeof vehicle === "object" && vehicle ? vehicle : {}),
+          label: vehicleLabel,
+          mpg_combined: Number(vehicle?.mpg_combined || mpg) || 25,
         },
       });
     } catch (error) {
       console.error("Start trip error:", error);
+      Alert.alert("Trip Error", "Could not start this trip.");
     }
   };
 
@@ -324,12 +393,12 @@ export default function HomeScreen({ userName }) {
     setSaveModalVisible(true);
   };
 
-  const onSave = () => {};
-
   const onViewOverview = async () => {
     if (!startLocation || !destination || !vehicle) return;
 
     const est = await onQuickCalc();
+
+    if (!est) return;
 
     navigation.navigate("Overview", {
       estDetail: est,
@@ -344,12 +413,12 @@ export default function HomeScreen({ userName }) {
     setIsModalVisible(true);
   };
 
-  const onStartLocationChange = (e) => {
+  const onStartLocationChange = () => {
     setModalContext(MODAL_CONTEXT.START_LOC);
     setIsModalVisible(true);
   };
 
-  const onDestinationChange = (e) => {
+  const onDestinationChange = () => {
     setModalContext(MODAL_CONTEXT.END_LOC);
     setIsModalVisible(true);
   };
@@ -531,40 +600,42 @@ export default function HomeScreen({ userName }) {
     if (!startLocation) return;
 
     const getLongLat = async () => {
-      if (startLocation?.isCurrentLocation && startLocation?.coordinates) {
-        const coords = {
-          latitude: startLocation.coordinates.latitude,
-          longitude: startLocation.coordinates.longitude,
-        };
+      try {
+        if (startLocation?.isCurrentLocation && startLocation?.coordinates) {
+          const coords = {
+            latitude: startLocation.coordinates.latitude,
+            longitude: startLocation.coordinates.longitude,
+          };
 
-        setLongLat(coords);
+          setLongLat(coords);
 
-        const { places } = await getGoogleGasStationNearbyFromLocation(coords);
-        setGasStations(places);
-        return;
-      }
+          const { places } = await getGoogleGasStationNearbyFromLocation(
+            coords
+          );
+          setGasStations(places || []);
+          return;
+        }
 
-      if (startLocation?.placePrediction?.placeId) {
-        const data = await getGooglePlaceLongLat(
-          startLocation.placePrediction.placeId
-        );
+        if (startLocation?.placePrediction?.placeId) {
+          const data = await getGooglePlaceLongLat(
+            startLocation.placePrediction.placeId
+          );
 
-        setLongLat(data.location);
+          setLongLat(data.location);
 
-        const { places } = await getGoogleGasStationNearbyFromLocation(
-          data.location
-        );
+          const { places } = await getGoogleGasStationNearbyFromLocation(
+            data.location
+          );
 
-        setGasStations(places);
+          setGasStations(places || []);
+        }
+      } catch (error) {
+        console.error("Location lookup error:", error);
       }
     };
 
-      getLongLat();
+    getLongLat();
   }, [startLocation]);
-
-  // useEffect(() => {
-  //   if (!startLocation || !destination) return;
-  // }, [startLocation, destination]);
 
   const handleAddStop = () => {
     if (stops.length === 25) return;
@@ -590,7 +661,7 @@ export default function HomeScreen({ userName }) {
 
   const onTrashPress = (id) => {
     setStops((prevStops) => {
-      const newStops = prevStops.filter((stop) => stop.id != id);
+      const newStops = prevStops.filter((stop) => stop.id !== id);
 
       return newStops;
     });
@@ -622,258 +693,101 @@ export default function HomeScreen({ userName }) {
 
   useEffect(() => {
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
     };
-  }, []);
-
-  useEffect(() => {
-    const loadRecents = async () => {
-      const recents = await getRecentLocations();
-      setRecentLocations(recents);
-    };
-
-    loadRecents();
   }, []);
 
   return (
-    
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <View style={styles.container}>
         <View style={styles.screenTitle}>
-          <Text style={styles.title}>Welcome</Text> 
+          <Text style={styles.title}>Welcome</Text>
           <Text style={styles.title}>{user?.email}</Text>
         </View>
 
-        <View style={styles.contentContainer}>
-          <View style={styles.contents}>
-            <SelectField
-              label="Starting Location"
-              placeholder="Enter starting location"
-              handlePress={onStartLocationChange}
-              labelBgColor={DARK_THEME.primaryBackground}
-              value={startLocation && startLocation.placePrediction.text.text}
-            />
+        <ScrollView
+          style={styles.formScroll}
+          contentContainerStyle={styles.formScrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.contentContainer}>
+            <View style={styles.contents}>
+              <View style={styles.locationRow}>
+                <View style={styles.locationInputWrapper}>
+                  <SelectField
+                    label="Starting Location"
+                    placeholder="Enter starting location"
+                    handlePress={onStartLocationChange}
+                    labelBgColor={DARK_THEME.primaryBackground}
+                    value={startLocation?.placePrediction?.text?.text || ""}
+                  />
+                </View>
 
-            <SelectField
-              label="Destination"
-              placeholder="Enter destination"
-              handlePress={onDestinationChange}
-              labelBgColor={DARK_THEME.primaryBackground}
-              value={destination && destination.placePrediction.text.text}
-            />
+                <TouchableOpacity
+                  style={[
+                    styles.locationButton,
+                    locationLoading && styles.locationButtonDisabled,
+                  ]}
+                  onPress={handleUseMyLocation}
+                  disabled={locationLoading}
+                >
+                  <Text style={styles.locationButtonText}>
+                    {locationLoading ? "Locating..." : "Use my location"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-            {stops.length > 0 && (
-              <FlatList
-                style={styles.flatListContainer}
-                contentContainerStyle={styles.flatListContent}
-                data={stops}
-                renderItem={renderStops}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={true}
+              {locationError ? (
+                <Text style={styles.helperText}>{locationError}</Text>
+              ) : null}
+
+              <SelectField
+                label="Destination"
+                placeholder="Enter destination"
+                handlePress={onDestinationChange}
+                labelBgColor={DARK_THEME.primaryBackground}
+                value={destination?.placePrediction?.text?.text || ""}
               />
-            )}
 
-            <SelectField
-              placeholder="Add a stop +"
-              handlePress={handleAddStop}
-              labelBgColor={DARK_THEME.primaryBackground}
-              isPlaceholderCenter={true}
-            />
-
-            <SelectField
-              label="Vehicle"
-              placeholder="Select a vehicle"
-              handlePress={onSelectVehicle}
-              labelBgColor={DARK_THEME.primaryBackground}
-              value={
-                vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
-              }
-            />
-            {/* <Pressable onPress={onQuickCalc}>
-              <View style={styles.caclBtnContainer}>
-                <Text style={styles.calcBtn}>Quick calculate</Text>
-              </View>
-            </Pressable> */}
-
-            {/* {estimate && (
-              <View style={styles.quickEstimateContainer}>
-                <View style={styles.estimateDetail}>
-                  <View style={styles.estimateRow}>
-                    <Text style={styles.estimateLabel}>Distance: </Text>
-                    <Text style={styles.estimateData}>
-                      {Math.ceil(estimate.distance)} mi
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={[styles.locationButton, locationLoading && styles.locationButtonDisabled]}
-                    onPress={handleUseMyLocation}
-                    disabled={locationLoading}
-                  >
-                    <Text style={styles.locationButtonText}>
-                      {locationLoading ? "Locating…" : "Use my location"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {activeLocationField === "start" &&
-                  getFilteredRecents("start").length > 0 && (
-                    <View style={styles.recentBox}>
-                      {getFilteredRecents("start").map((item, index) => (
-                        <TouchableOpacity
-                          key={`${item.placeId || item.description}-${index}`}
-                          style={styles.recentItem}
-                          onPressIn={() => handleSelectRecentLocation("start", item)}
-                        >
-                          <Text style={styles.recentLabel}>Recent</Text>
-                          <Text style={styles.recentText}>{item.description}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-
-                {startSuggestions.length > 0 && (
-                  <View style={styles.fullWidthSuggestionsBox}>
-                    {startSuggestions.slice(0, 5).map((item, index) => (
-                      <TouchableOpacity
-                        key={item?.placePrediction?.placeId || index}
-                        style={styles.suggestionItem}
-                        onPress={() => handleSelectSuggestion("start", item)}
-                      >
-                        <Text style={styles.suggestionText}>
-                          {item?.placePrediction?.text?.text}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-
-
-              <View>
-                <Text style={styles.inputLabel}>Destination</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter destination"
-                  placeholderTextColor={DARK_THEME.placeholder}
-                  value={destination?.placePrediction?.text?.text || ""}
-                  onFocus={() => setActiveLocationField("destination")}
-                  onBlur={() => {
-                    setTimeout(() => setActiveLocationField(null), 250);
-                  }}
-                  onChangeText={(text) => {
-                    setActiveLocationField("destination");
-                    handleAddressTyping("destination", text);
-                  }}
+              {stops.length > 0 && (
+                <FlatList
+                  style={styles.flatListContainer}
+                  contentContainerStyle={styles.flatListContent}
+                  data={stops}
+                  renderItem={renderStops}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={true}
                 />
+              )}
 
-                {activeLocationField === "destination" &&
-                  getFilteredRecents("destination").length > 0 && (
-                    <View style={styles.recentBox}>
-                      {getFilteredRecents("destination").map((item, index) => (
-                        <TouchableOpacity
-                          key={`${item.placeId || item.description}-${index}`}
-                          style={styles.recentItem}
-                          onPressIn={() => handleSelectRecentLocation("destination", item)}
-                        >
-                          <Text style={styles.recentLabel}>Recent</Text>
-                          <Text style={styles.recentText}>{item.description}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
+              <SelectField
+                placeholder="Add a stop +"
+                handlePress={handleAddStop}
+                labelBgColor={DARK_THEME.primaryBackground}
+                isPlaceholderCenter={true}
+              />
 
-                {destinationAutocompleteLoading ? (
-                  <Text style={styles.helperText}>Loading suggestions...</Text>
-                ) : null}
+              <SelectField
+                label="Vehicle"
+                placeholder="Select a vehicle"
+                handlePress={onSelectVehicle}
+                labelBgColor={DARK_THEME.primaryBackground}
+                value={
+                  typeof vehicle === "string"
+                    ? vehicle
+                    : vehicle
+                      ? `${vehicle.year || ""} ${vehicle.make || ""} ${
+                          vehicle.model || ""
+                        }`.trim()
+                      : ""
+                }
+              />
 
-                {destinationSuggestions.length > 0 ? (
-                  <View style={styles.suggestionsBox}>
-                    {destinationSuggestions.slice(0, 5).map((item, idx) => (
-                      <TouchableOpacity
-                        key={
-                          item?.placePrediction?.placeId ||
-                          `${item?.placePrediction?.text?.text || "place"}-${idx}`
-                        }
-                        style={styles.suggestionItem}
-                        onPress={() => handleSelectSuggestion("destination", item)}
-                      >
-                        <Text style={styles.suggestionText}>
-                          {item?.placePrediction?.text?.text}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-
-              <View style={styles.vehicleRow}>
-                <View style={styles.vehicleField}>
-                  <Text style={styles.inputLabel}>Vehicle</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter vehicle"
-                    placeholderTextColor={DARK_THEME.placeholder}
-                    value={vehicle}
-                    onChangeText={setVehicle}
-                  />
-                </View>
-
-                <View style={styles.mpgField}>
-                  <Text style={styles.inputLabel}>MPG</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="28"
-                    placeholderTextColor={DARK_THEME.placeholder}
-                    value={mpg}
-                    onChangeText={setMpg}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-              {/*
-              <Pressable onPress={onQuickCalc}>
-                <View style={styles.caclBtnContainer}>
-                  <Text style={styles.calcBtn}>Quick calculate</Text>
-                </View>
-              </Pressable>
-              
-
-              {estimate && (
-                <View style={styles.quickEstimateContainer}>
-                  <View style={styles.estimateDetail}>
-                    <View style={styles.estimateRow}>
-                      <Text style={styles.estimateLabel}>Distance: </Text>
-                      <Text style={styles.estimateData}>
-                        {Math.ceil(estimate.distance)} mi
-                      </Text>
-                    </View>
-                    <View style={styles.estimateRow}>
-                      <Text style={styles.estimateLabel}>Estimated Cost : </Text>
-                      <Text style={styles.estimateData}>
-                        ${" "}
-                        {calcGasCost(
-                          estimate.distance,
-                          vehicle.mpg_combined,
-                          estimate.gasPrice,
-                        )}
-                      </Text>
-                    </View>
-                    <View style={styles.estimateRow}>
-                      <Text style={styles.estimateLabel}>ETA: </Text>
-                      <Text style={styles.estimateData}>
-                        {Math.ceil(estimate.duration)} min
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Pressable onPress={onSave}>
-                    <View style={styles.saveBtnContainer}>
-                      <Text style={styles.calcBtn}>Save</Text>
-                    </View>
-                  </Pressable>
-                </View>
-              )} */}
+              {locationError ? (
+                <Text style={styles.helperText}>{locationError}</Text>
+              ) : null}
             </View>
 
             <View style={styles.bottomButtonRow}>
@@ -888,11 +802,11 @@ export default function HomeScreen({ userName }) {
           </View>
         </ScrollView>
 
-        {/* render location and car select modals */}
         <Modal
           style={styles.modal}
           visible={isModalVisible}
           animationType="slide"
+          onRequestClose={() => setIsModalVisible(false)}
         >
           {modalContext === MODAL_CONTEXT.CAR_SELECT && (
             <VehicleSelection
@@ -929,7 +843,6 @@ export default function HomeScreen({ userName }) {
           )}
         </Modal>
 
-        {/* render save modal */}
         <Modal
           transparent
           animationType="fade"
@@ -968,7 +881,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     alignItems: "center",
     justifyContent: "center",
-    border: "black",
+    borderColor: "black",
     borderWidth: 2,
     borderLeftWidth: 0,
     borderRightWidth: 0,
@@ -979,7 +892,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "space-between",
   },
   contents: {
@@ -1017,6 +930,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
     marginBottom: 20,
+    marginTop: 20,
   },
   startTripButton: {
     flex: 1,
@@ -1060,7 +974,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
   },
-  estimateLabel: { color: "#fafafa", fontSize: 18, fontWeight: "bold" },
+  estimateLabel: {
+    color: "#fafafa",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
   estimateData: {
     color: "#fafafa",
     fontSize: 18,
@@ -1077,13 +995,12 @@ const styles = StyleSheet.create({
   },
   locationButton: {
     backgroundColor: DARK_THEME.primaryText,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    minHeight: 56,
-    marginBottom: 0,
-    marginTop: 28,
+    minHeight: 48,
   },
   fullWidthSuggestionsBox: {
     width: "100%",
@@ -1107,16 +1024,13 @@ const styles = StyleSheet.create({
     color: "#fafafa",
     paddingHorizontal: 15,
   },
-  modal: {
-    // backgroundColor: DARK_THEME.modalBackground,
-  },
+  modal: {},
   saveModalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
-
   saveModalBox: {
     backgroundColor: DARK_THEME.modalBackground || DARK_THEME.primaryBackground,
     borderRadius: 14,
@@ -1133,13 +1047,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
   },
-
   saveModalMessage: {
     color: DARK_THEME.placeholder,
     fontSize: 15,
     textAlign: "center",
   },
-
   saveModalCloseButton: {
     marginTop: 8,
     paddingVertical: 10,
@@ -1147,7 +1059,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: DARK_THEME.primaryText,
   },
-
   saveModalCloseText: {
     color: DARK_THEME.primaryBackground,
     fontWeight: "bold",
@@ -1159,7 +1070,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 8,
   },
-
   input: {
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
@@ -1170,23 +1080,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 52,
   },
-
   suggestionsBox: {
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
     borderRadius: 10,
     overflow: "hidden",
     marginTop: 6,
+    marginBottom: 10,
     backgroundColor: DARK_THEME.modalBackground,
   },
-
   suggestionItem: {
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: DARK_THEME.primaryBorder,
   },
-
   suggestionText: {
     color: DARK_THEME.primaryText,
     fontSize: 14,
@@ -1197,38 +1105,14 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 8,
   },
-
-  suggestionsBox: {
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 10,
-    overflow: "hidden",
-    marginTop: 6,
-    marginBottom: 10,
-    backgroundColor: DARK_THEME.modalBackground,
-  },
-
-  suggestionItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: DARK_THEME.primaryBorder,
-  },
-
-  suggestionText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 14,
-  },
   vehicleRow: {
     flexDirection: "row",
     gap: 10,
     alignItems: "flex-start",
   },
-
   vehicleField: {
     flex: 3,
   },
-
   mpgField: {
     flex: 1,
   },
@@ -1241,21 +1125,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: DARK_THEME.modalBackground,
   },
-
   recentItem: {
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: DARK_THEME.primaryBorder,
   },
-
   recentLabel: {
     color: "#93C5FD",
     fontSize: 12,
     fontWeight: "bold",
     marginBottom: 3,
   },
-
   recentText: {
     color: DARK_THEME.primaryText,
     fontSize: 14,
@@ -1274,16 +1155,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexGrow: 1,
     gap: 10,
-    // backgroundColor: "pink",
   },
   trashContainer: {
-    // backgroundColor: "red",
     justifyContent: "center",
+    alignItems: "center",
     flex: 1,
+    paddingHorizontal: 4,
+  },
   formScroll: {
     flex: 1,
   },
-
   formScrollContent: {
     flexGrow: 1,
   },
