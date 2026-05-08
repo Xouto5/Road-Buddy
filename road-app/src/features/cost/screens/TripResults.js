@@ -108,9 +108,11 @@ export default function TripResults({ route, navigation }) {
       vehicle,
       mpg,
       distance,
+      duration,
       gasPrice: gasPriceNumber, // Using the parsed number.
       fuelType,
-      totalCost
+      totalCost,
+      overviewPolyline
     };
 
     const result = await saveTrip(tripData, currentTripId);

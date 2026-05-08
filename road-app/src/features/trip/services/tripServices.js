@@ -3,7 +3,7 @@
 Author: Nathan Rochel                               
 Date: 4/23/2026
 
-Description: Trip services that allow users to save and delete a trip.
+Description: Trip services that allow users to save and edit a trip.
 
 */
 
