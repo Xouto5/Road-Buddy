@@ -6,8 +6,16 @@ Author: Bryan Cardeno
 Date: 03-12-2026
 */
 
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
-import { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  Platform,
+  Linking,
+} from "react-native";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MapView, { Polyline } from "react-native-maps";
@@ -15,6 +23,7 @@ import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Fontisto from "@expo/vector-icons/Fontisto";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 
 import { decode } from "@googlemaps/polyline-codec";
 
@@ -36,27 +45,50 @@ export default function TripDetailsScreen({ route }) {
     // Need to look into it more
   });
 
-  // used for debugging
-  // const runDecode = () => {
-  //   console.log(polylines);
+  const openInMaps = () => {
+    if (polylines.length === 0) return;
 
-  //   const mappedDecode = polylines.map((ar) => {
-  //     const latLong = { latitude: ar[0], longitude: ar[1] };
+    const origin = { ...polylines[0] };
+    const destination = { ...polylines[polylines.length - 1] };
 
-  //     return latLong;
-  //   });
+    let url;
 
-  //   setPolylines(mappedDecode);
+    if (Platform.OS === "ios") {
+      url = `http://maps.apple.com/?saddr=${originLatLng.latitude},${originLatLng.longitude}&daddr=${destLatLng.latitude},${destLatLng.longitude}&dirflg=d`;
+    } else {
+      url = `google.navigation:q=${destination.latitude},${destination.longitude}&mode=d`;
+    }
 
-  //   console.log(polylines);
-  // };
+    Linking.openURL(url);
+  };
+
+  const bottomSheetRef = useRef(null);
+
+  const handleSheetChanges = useCallback((index) => {}, []);
+
+  const constructEstimateObject = () => {
+    const {
+      distance,
+      duration,
+      startName,
+      destinationName,
+      gasPrice,
+      vehicle,
+    } = estimate;
+
+    return {
+      startLocation: startName,
+      destination: destinationName,
+      vehicle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      mpg: vehicle.mpg_combined.toString(),
+      gasPrice: gasPrice.toString(),
+    };
+  };
 
   useEffect(() => {
     if (!route.params) return;
 
     const { estDetail, pointA, pointB, car } = route.params;
-
-    console.log(route.params);
 
     const decoded = decode(
       route?.params?.estDetail?.polylines?.encodedPolyline,
@@ -80,17 +112,6 @@ export default function TripDetailsScreen({ route }) {
       gasPrice: estDetail.gasPrice,
       vehicle: car,
     }));
-
-    // TODO: CREATE STATE IN HOMESCREEN
-    // const {distance: dis, duration: dur, gasPrice: gas} = route.params.estDetail;
-    // setEstimate({
-    //   distance: dis,
-    //   duration: dur,
-    //   cost: (
-    //                   (dis/ vehicle.mpg_combined) *
-    //                   estimate.gasPrice
-    //                 ).toFixed(2)
-    // })
   }, [route.params]);
 
   return (
@@ -140,7 +161,13 @@ export default function TripDetailsScreen({ route }) {
           </View>
 
           <View style={styles.buttonContainer}>
-            <Fontisto name="more-v" size={30} color="#fafafa" />
+            <Pressable
+              onPress={() =>
+                navigation.navigate("Estimate", constructEstimateObject())
+              }
+            >
+              <Fontisto name="more-v" size={30} color="#fafafa" />
+            </Pressable>
           </View>
         </View>
 
@@ -163,6 +190,47 @@ export default function TripDetailsScreen({ route }) {
             <AntDesign name="car" size={30} color="#fafafa" />
           </View>
         </View>
+
+        <BottomSheet
+          ref={bottomSheetRef}
+          snapPoints={["4%", "40%"]}
+          index={0}
+          backgroundStyle={styles.bottomSheet}
+        >
+          <BottomSheetView style={styles.bottomSheetContent}>
+            <Pressable style={styles.btnContainer} onPress={openInMaps}>
+              <View style={styles.bottomSheetBtn}>
+                <Text style={styles.calcBtn}>Open in Maps</Text>
+              </View>
+            </Pressable>
+
+            <Pressable
+              style={styles.btnContainer}
+              onPress={() => console.log("save pressed")}
+            >
+              <View style={styles.bottomSheetBtn}>
+                <Text style={styles.calcBtn}>Save Trip</Text>
+              </View>
+            </Pressable>
+            <Pressable
+              style={styles.btnContainer}
+              onPress={() => navigation.navigate("Plan")}
+            >
+              <View style={styles.bottomSheetBtn}>
+                <Text style={styles.calcBtn}>Add Stop</Text>
+              </View>
+            </Pressable>
+
+            <Pressable
+              style={styles.btnContainer}
+              onPress={() => console.log("discard pressed")}
+            >
+              <View style={styles.bottomSheetBtn}>
+                <Text style={styles.calcBtn}>Discard Trip</Text>
+              </View>
+            </Pressable>
+          </BottomSheetView>
+        </BottomSheet>
       </View>
     </SafeAreaView>
   );
@@ -174,7 +242,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   map: {
-    width: "100%",
+    // ...StyleSheet.absoluteFillObject,
     height: "100%",
   },
   tripDetail: {
@@ -212,7 +280,7 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   iconContainer: {
-    backgroundColor: "rgba(125,125,125, 0.9)",
+    // backgroundColor: "rgba(125,125,125, 0.9)",
     padding: 6,
     borderRadius: 50,
   },
@@ -224,5 +292,33 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flexDirection: "row",
+  },
+  bottomSheetContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    flex: 1,
+    gap: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  bottomSheet: {
+    backgroundColor: "rgba(125,125,125, 0.95)",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.1)",
+  },
+  bottomSheetBtn: {
+    height: 50,
+    borderWidth: 0,
+    backgroundColor: "#e4e4e4",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 10,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+  },
+  btnContainer: {
+    // backgroundColor: "red",
+    width: "100%",
   },
 });

@@ -22,7 +22,6 @@ const AUTOCOMPLETE_FIELD_MASK = [
 
 // Refer to https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch for fetching API documentation.
 
-// TODO: Read more about sessionToken and calling the correct API once the user selects an address from autocomplete.
 // Google only bills 1 time per session, instead charging every single API calls each request without sessionToken.
 // Need to find the endpoint to "CONFIRM" location using placeId for the billing to only be charged per session.
 
@@ -55,7 +54,6 @@ export const getGoogleAutocomplete = async (userInput, sessToken) => {
   }
 };
 
-//TODO: Fix to return response ok or something that needs to be verified by the using
 export const completeGoogleAddress = async (placeId, sessToken) => {
   const url = `${GOOGLE_PLACES_ENDPOINT}/${placeId}?sessionToken=${sessToken}`;
 
@@ -95,7 +93,7 @@ export const getGooglePlaceLongLat = async (placeId) => {
       throw new Error(`Response status: ${response.status}`);
     }
 
-    const result = response.json();
+    const result = await response.json();
     return result;
   } catch (error) {
     console.log(error);
@@ -146,7 +144,7 @@ export const getGoogleGasStationNearbyFromLocation = async ({
       );
     }
 
-    const result = response.json();
+    const result = await response.json();
     return result;
   } catch (error) {
     console.log(error);
@@ -162,7 +160,7 @@ const ROUTES_FIELD_MASK = [
   "routes.polyline.encodedPolyline",
 ];
 
-export const getGoogleDistance = async (originId, destinationId) => {
+export const getGoogleRoutes = async (originId, destinationId, stops) => {
   try {
     const response = await fetch(GOOGLE_ROUTES_ENDPOINT, {
       method: "POST",
@@ -178,8 +176,10 @@ export const getGoogleDistance = async (originId, destinationId) => {
         destination: {
           placeId: destinationId,
         },
+        intermediates: stops,
         travelMode: "DRIVE",
         regionCode: "us",
+        polylineEncoding: "ENCODED_POLYLINE",
       }),
     });
 
