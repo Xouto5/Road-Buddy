@@ -22,9 +22,10 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword , sendEmailVerification} from "firebase/auth";
 // Shared dark theme colors used across app screens
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
+import { performFirestoreOperations } from "../../../core/firebase/firebaseConfig";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+.[^\s@]+$/;
 
@@ -101,8 +102,13 @@ export default function CreateNewAccountScreen({ navigation }) {
         email,
         password,
       );
-      const user = userCredential.user;
 
+      performFirestoreOperations(firstName,lastName,email,"Camry",phone);
+      sendEmailVerification(auth.currentUser)
+
+
+      const user = userCredential.user;
+      
       // Feedback / navigation after successful signup
       setLoading(false);
       Alert.alert("Account created", "Your account was created successfully.");

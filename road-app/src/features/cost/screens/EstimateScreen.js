@@ -26,12 +26,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert
 } from "react-native";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { geocodeAddress } from "../../trip/services/geocodeService";
 import { getDirections } from "../../trip/services/directionsService";
 import { milesToGallons, tripFuelCost, costPerMile } from "../services/calc";
+import { verifyEmail, isUserVerified } from "../../auth/services/authServices";
 
 const GOOGLE_PLACES_ENDPOINT =
   "https://places.googleapis.com/v1/places:autocomplete";
@@ -63,6 +65,22 @@ export default function EstimateScreen({ navigation, route }) {
     useState(false);
   const debounceRef = useRef(null);
   const sessionTokenRef = useRef(`estimate-${Date.now()}`);
+    if(!isUserVerified()){
+    Alert.alert(
+    'Email is not verified',
+    'Please verify your email. Check your email for an existing link, or click send again to receive a new one',
+    [
+      {
+        text: 'Okay', 
+      },
+      {
+        text: 'Send Again', 
+        onPress: () => console.log(verifyEmail())
+      },
+    ],
+    {cancelable: false},
+    );
+  }
 
   // Repopulate fields when returning from TripResults via Edit Trip
   useEffect(() => {
@@ -350,6 +368,7 @@ export default function EstimateScreen({ navigation, route }) {
       });
 
       const distance = directionsData.distanceMiles;
+      const duration = directionsData.durationMinutes;
       const mpgNumber = parseFloat(mpg);
 
       // Calculate gallons, cost per mile, and total cost
@@ -373,6 +392,8 @@ export default function EstimateScreen({ navigation, route }) {
         gasPrice,
         fuelType,
         distance: distance.toFixed(2),
+        duration: Number.isFinite(duration) ? Math.ceil(duration) : 0,
+        overviewPolyline: directionsData.polyline || "",
         gallons: gallonsDisplay,
         costPerMile: costPerMileDisplay,
         totalCost: totalCostDisplay,

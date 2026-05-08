@@ -126,3 +126,5 @@ If `npx expo start` runs, you are done with the setup for this app!
 If you have more questions on perhaps troubleshooting, please let me know (its me jerry teehee. hope this all makes sense).
 
 Had to get `npx expo install expo-location` locally to test Google API stuff testing.
+
+Had to do `npx expo install expo-auth-session expo-web-browser` to run.
