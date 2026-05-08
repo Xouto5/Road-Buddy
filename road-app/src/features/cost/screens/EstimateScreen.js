@@ -35,7 +35,8 @@ import { getDirections } from "../../trip/services/directionsService";
 import { milesToGallons, tripFuelCost, costPerMile } from "../services/calc";
 import { verifyEmail, isUserVerified } from "../../auth/services/authServices";
 
-const GOOGLE_PLACES_ENDPOINT = "https://places.googleapis.com/v1/places:autocomplete";
+const GOOGLE_PLACES_ENDPOINT =
+  "https://places.googleapis.com/v1/places:autocomplete";
 const AUTOCOMPLETE_FIELD_MASK = [
   "suggestions.placePrediction.placeId",
   "suggestions.placePrediction.text.text",
@@ -58,8 +59,10 @@ export default function EstimateScreen({ navigation, route }) {
   const [calculationLoading, setCalculationLoading] = useState(false);
   const [startSuggestions, setStartSuggestions] = useState([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState([]);
-  const [startAutocompleteLoading, setStartAutocompleteLoading] = useState(false);
-  const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] = useState(false);
+  const [startAutocompleteLoading, setStartAutocompleteLoading] =
+    useState(false);
+  const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] =
+    useState(false);
   const debounceRef = useRef(null);
   const sessionTokenRef = useRef(`estimate-${Date.now()}`);
     if(!isUserVerified()){
@@ -82,6 +85,7 @@ export default function EstimateScreen({ navigation, route }) {
   // Repopulate fields when returning from TripResults via Edit Trip
   useEffect(() => {
     const p = route?.params;
+    console.log(p);
     if (!p) return;
     if (p.startLocation !== undefined) setStartLocation(p.startLocation);
     if (p.destination !== undefined) setDestination(p.destination);
@@ -99,10 +103,14 @@ export default function EstimateScreen({ navigation, route }) {
       const { status } = await Location.requestForegroundPermissionsAsync();
       // If permission is denied, fail gracefully without breaking the UI.
       if (status !== "granted") {
-        setLocationError("Location permission denied. Enable it in your device settings.");
+        setLocationError(
+          "Location permission denied. Enable it in your device settings.",
+        );
         return;
       }
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
       const [place] = await Location.reverseGeocodeAsync({
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
@@ -111,7 +119,9 @@ export default function EstimateScreen({ navigation, route }) {
         const parts = [place.street, place.city, place.region].filter(Boolean);
         setStartLocation(parts.join(", "));
       } else {
-        setStartLocation(`${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`);
+        setStartLocation(
+          `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`,
+        );
       }
       setValidationErrors((e) => ({ ...e, startLocation: undefined }));
     } catch (err) {
@@ -132,18 +142,23 @@ export default function EstimateScreen({ navigation, route }) {
       if (status !== "granted") {
         setValidationErrors((e) => ({
           ...e,
-          gasPrice: "Location permission denied. Enable it in settings to use local price.",
+          gasPrice:
+            "Location permission denied. Enable it in settings to use local price.",
         }));
         return;
       }
 
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
       const googleApiKey =
         process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
         process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID;
 
       if (!googleApiKey) {
-        throw new Error("Missing Google Maps API key. Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.");
+        throw new Error(
+          "Missing Google Maps API key. Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.",
+        );
       }
 
       const params = new URLSearchParams({
@@ -158,13 +173,17 @@ export default function EstimateScreen({ navigation, route }) {
       );
 
       if (!placesResponse.ok) {
-        throw new Error(`Gas station lookup failed (${placesResponse.status}).`);
+        throw new Error(
+          `Gas station lookup failed (${placesResponse.status}).`,
+        );
       }
 
       const placesData = await placesResponse.json();
 
       if (placesData.status !== "OK" && placesData.status !== "ZERO_RESULTS") {
-        throw new Error(placesData.error_message || `Places API error: ${placesData.status}`);
+        throw new Error(
+          placesData.error_message || `Places API error: ${placesData.status}`,
+        );
       }
 
       const stations = placesData.results || [];
@@ -175,7 +194,8 @@ export default function EstimateScreen({ navigation, route }) {
       let localPrice = null;
       if (priceLevels.length > 0) {
         const avgPriceLevel =
-          priceLevels.reduce((sum, level) => sum + level, 0) / priceLevels.length;
+          priceLevels.reduce((sum, level) => sum + level, 0) /
+          priceLevels.length;
 
         // Google price_level is 0-4, so convert it to a practical per-gallon estimate.
         const fuelTypeOffsets = { Regular: 0.0, Premium: 0.55, Diesel: 0.35 };
@@ -184,7 +204,9 @@ export default function EstimateScreen({ navigation, route }) {
       }
 
       if (localPrice === null) {
-        throw new Error("Local gas pricing is unavailable for nearby stations. Enter gas price manually.");
+        throw new Error(
+          "Local gas pricing is unavailable for nearby stations. Enter gas price manually.",
+        );
       }
 
       setGasPrice(`$${localPrice.toFixed(2)}`);
@@ -192,7 +214,9 @@ export default function EstimateScreen({ navigation, route }) {
     } catch (err) {
       setValidationErrors((e) => ({
         ...e,
-        gasPrice: err.message || "Could not fetch local gas price. Please enter manually.",
+        gasPrice:
+          err.message ||
+          "Could not fetch local gas price. Please enter manually.",
       }));
     } finally {
       setGasPriceLoading(false);
@@ -332,7 +356,7 @@ export default function EstimateScreen({ navigation, route }) {
 
     try {
       setCalculationLoading(true);
-      
+
       // Geocode both addresses to get lat/lng
       const startCoords = await geocodeAddress(startLocation);
       const destCoords = await geocodeAddress(destination);
@@ -346,16 +370,19 @@ export default function EstimateScreen({ navigation, route }) {
       const distance = directionsData.distanceMiles;
       const duration = directionsData.durationMinutes;
       const mpgNumber = parseFloat(mpg);
-      
+
       // Calculate gallons, cost per mile, and total cost
       const gallonsUsed = milesToGallons(distance, mpgNumber);
       const totalTripCost = tripFuelCost(distance, mpgNumber, gasPriceNumber);
       const costMileValue = costPerMile(mpgNumber, gasPriceNumber);
 
       // Format values for display
-      const gallonsDisplay = gallonsUsed !== null ? gallonsUsed.toFixed(2) : "0.00";
-      const costPerMileDisplay = costMileValue !== null ? costMileValue.toFixed(2) : "0.00";
-      const totalCostDisplay = totalTripCost !== null ? totalTripCost.toFixed(2) : "0.00";
+      const gallonsDisplay =
+        gallonsUsed !== null ? gallonsUsed.toFixed(2) : "0.00";
+      const costPerMileDisplay =
+        costMileValue !== null ? costMileValue.toFixed(2) : "0.00";
+      const totalCostDisplay =
+        totalTripCost !== null ? totalTripCost.toFixed(2) : "0.00";
 
       navigation.navigate("TripResults", {
         startLocation,
@@ -374,7 +401,8 @@ export default function EstimateScreen({ navigation, route }) {
     } catch (error) {
       setValidationErrors((prevErrors) => ({
         ...prevErrors,
-        calculation: error.message || "Failed to calculate trip. Please try again.",
+        calculation:
+          error.message || "Failed to calculate trip. Please try again.",
       }));
     } finally {
       setCalculationLoading(false);
@@ -408,20 +436,31 @@ export default function EstimateScreen({ navigation, route }) {
             <Text style={styles.label}>Start location</Text>
             <View style={styles.locationRow}>
               <TextInput
-                style={[styles.input, styles.locationInput, validationErrors.startLocation && styles.inputError]}
+                style={[
+                  styles.input,
+                  styles.locationInput,
+                  validationErrors.startLocation && styles.inputError,
+                ]}
                 placeholder="e.g., New York, NY"
                 placeholderTextColor={DARK_THEME.placeholder}
                 value={startLocation}
                 onChangeText={(v) => handleAddressTyping("start", v)}
                 onBlur={() => {
-                  const startLocationError = validateStartLocation(startLocation);
-                  setValidationErrors((e) => ({ ...e, startLocation: startLocationError }));
+                  const startLocationError =
+                    validateStartLocation(startLocation);
+                  setValidationErrors((e) => ({
+                    ...e,
+                    startLocation: startLocationError,
+                  }));
                 }}
               />
               {/* Include "Use my location" button to the right of the input field. */}
               {/* TODO: When pressed, request location permission and autofill using GPS. */}
               <TouchableOpacity
-                style={[styles.locationButton, locationLoading && styles.locationButtonDisabled]}
+                style={[
+                  styles.locationButton,
+                  locationLoading && styles.locationButtonDisabled,
+                ]}
                 onPress={handleUseMyLocation}
                 disabled={locationLoading}
               >
@@ -437,11 +476,16 @@ export default function EstimateScreen({ navigation, route }) {
               <View style={styles.suggestionsBox}>
                 {startSuggestions.slice(0, 5).map((item, idx) => (
                   <TouchableOpacity
-                    key={item?.placePrediction?.placeId || `${item?.placePrediction?.text?.text || "place"}-${idx}`}
+                    key={
+                      item?.placePrediction?.placeId ||
+                      `${item?.placePrediction?.text?.text || "place"}-${idx}`
+                    }
                     style={styles.suggestionItem}
                     onPress={() => handleSelectSuggestion("start", item)}
                   >
-                    <Text style={styles.suggestionText}>{item?.placePrediction?.text?.text}</Text>
+                    <Text style={styles.suggestionText}>
+                      {item?.placePrediction?.text?.text}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -450,7 +494,9 @@ export default function EstimateScreen({ navigation, route }) {
               <Text style={styles.fieldError}>{locationError}</Text>
             ) : null}
             {validationErrors.startLocation ? (
-              <Text style={styles.fieldError}>{validationErrors.startLocation}</Text>
+              <Text style={styles.fieldError}>
+                {validationErrors.startLocation}
+              </Text>
             ) : null}
 
             {/* Destination input labeled "Destination" below start location. */}
@@ -459,7 +505,8 @@ export default function EstimateScreen({ navigation, route }) {
               style={[
                 styles.input,
                 validationErrors.destination && styles.inputError,
-                validationErrors.destination && styles.destinationInputErrorSpacing,
+                validationErrors.destination &&
+                  styles.destinationInputErrorSpacing,
               ]}
               placeholder="e.g., Los Angeles, CA"
               placeholderTextColor={DARK_THEME.placeholder}
@@ -473,17 +520,24 @@ export default function EstimateScreen({ navigation, route }) {
               <View style={styles.suggestionsBox}>
                 {destinationSuggestions.slice(0, 5).map((item, idx) => (
                   <TouchableOpacity
-                    key={item?.placePrediction?.placeId || `${item?.placePrediction?.text?.text || "place"}-${idx}`}
+                    key={
+                      item?.placePrediction?.placeId ||
+                      `${item?.placePrediction?.text?.text || "place"}-${idx}`
+                    }
                     style={styles.suggestionItem}
                     onPress={() => handleSelectSuggestion("destination", item)}
                   >
-                    <Text style={styles.suggestionText}>{item?.placePrediction?.text?.text}</Text>
+                    <Text style={styles.suggestionText}>
+                      {item?.placePrediction?.text?.text}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             ) : null}
             {validationErrors.destination ? (
-              <Text style={styles.fieldError}>{validationErrors.destination}</Text>
+              <Text style={styles.fieldError}>
+                {validationErrors.destination}
+              </Text>
             ) : null}
 
             <View style={styles.inlineRow}>
@@ -503,11 +557,18 @@ export default function EstimateScreen({ navigation, route }) {
                 <Text style={styles.label}>MPG</Text>
                 {/* MPG should allow manual input from the user. */}
                 <TextInput
-                  style={[styles.input, styles.inlineInput, validationErrors.mpg && styles.inputError]}
+                  style={[
+                    styles.input,
+                    styles.inlineInput,
+                    validationErrors.mpg && styles.inputError,
+                  ]}
                   placeholder="e.g., 28"
                   placeholderTextColor={DARK_THEME.placeholder}
                   value={mpg}
-                  onChangeText={(v) => { setMpg(v); setValidationErrors((e) => ({ ...e, mpg: undefined })); }}
+                  onChangeText={(v) => {
+                    setMpg(v);
+                    setValidationErrors((e) => ({ ...e, mpg: undefined }));
+                  }}
                   keyboardType="numeric"
                 />
                 {validationErrors.mpg ? (
@@ -524,10 +585,18 @@ export default function EstimateScreen({ navigation, route }) {
               {["Regular", "Premium", "Diesel"].map((type) => (
                 <TouchableOpacity
                   key={type}
-                  style={[styles.fuelTypeButton, fuelType === type && styles.fuelTypeButtonActive]}
+                  style={[
+                    styles.fuelTypeButton,
+                    fuelType === type && styles.fuelTypeButtonActive,
+                  ]}
                   onPress={() => setFuelType(type)}
                 >
-                  <Text style={[styles.fuelTypeText, fuelType === type && styles.fuelTypeTextActive]}>
+                  <Text
+                    style={[
+                      styles.fuelTypeText,
+                      fuelType === type && styles.fuelTypeTextActive,
+                    ]}
+                  >
                     {type}
                   </Text>
                 </TouchableOpacity>
@@ -537,7 +606,11 @@ export default function EstimateScreen({ navigation, route }) {
               {/* Provide input field labeled "Gas Price (per gallon)". */}
               {/* If user manually edits the gas price, it should override autofill! */}
               <TextInput
-                style={[styles.input, styles.locationInput, validationErrors.gasPrice && styles.inputError]}
+                style={[
+                  styles.input,
+                  styles.locationInput,
+                  validationErrors.gasPrice && styles.inputError,
+                ]}
                 placeholder="e.g., $4.25"
                 placeholderTextColor={DARK_THEME.placeholder}
                 value={gasPrice}
@@ -554,7 +627,10 @@ export default function EstimateScreen({ navigation, route }) {
               {/* Include button "Use local price" next to gas price input. */}
               {/* TODO: When pressed, autofill gas price value (use of API). */}
               <TouchableOpacity
-                style={[styles.locationButton, gasPriceLoading && styles.locationButtonDisabled]}
+                style={[
+                  styles.locationButton,
+                  gasPriceLoading && styles.locationButtonDisabled,
+                ]}
                 onPress={handleUseLocalPrice}
                 disabled={gasPriceLoading}
               >
@@ -569,7 +645,9 @@ export default function EstimateScreen({ navigation, route }) {
           </View>
 
           {validationErrors.calculation ? (
-            <Text style={styles.fieldError}>{validationErrors.calculation}</Text>
+            <Text style={styles.fieldError}>
+              {validationErrors.calculation}
+            </Text>
           ) : null}
 
           {/* Add "Calculate" button at the bottom of the screen. */}
@@ -579,7 +657,10 @@ export default function EstimateScreen({ navigation, route }) {
           {/* Do not display results on the same screen. */}
           <View style={styles.calculateContainer}>
             <TouchableOpacity
-              style={[styles.primaryButton, calculationLoading && styles.primaryButtonDisabled]}
+              style={[
+                styles.primaryButton,
+                calculationLoading && styles.primaryButtonDisabled,
+              ]}
               onPress={handleRecalculate}
               disabled={calculationLoading}
             >

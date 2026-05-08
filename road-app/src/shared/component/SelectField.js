@@ -20,26 +20,37 @@ Date: 04-29-2026
 import { View, Text, StyleSheet, Pressable, useWindowDimensions } from "react-native";
 import { DARK_THEME } from "../style/ColorScheme";
 
-function SelectField({ label, value, placeholder, handlePress, labelBgColor }) {
+function SelectField({
+  label,
+  value,
+  placeholder,
+  handlePress,
+  labelBgColor,
+  containerStyle,
+  isPlaceholderCenter = false,
+} = {}) {
   const hasValue = typeof value === "string" && value.trim().length > 0;
   const displayText = hasValue ? value : placeholder || "";
   const { width } = useWindowDimensions();
   const topPadding = width < 500 ? 14 : 8;
 
   return (
-    <View style={styles.inputContainer}>
+    <View style={[styles.inputContainer, containerStyle]}>
       <Pressable style={styles.pressable} onPress={handlePress}>
         <View style={[styles.labelContainer, { backgroundColor: labelBgColor }]}>
           <Text style={styles.inputLabel}>{label}</Text>
         </View>
 
-        <Text
-          numberOfLines={3}
-          ellipsizeMode="tail"
-          style={hasValue ? styles.textInput : styles.placeholder}
+        <View
+          style={[
+            styles.textContainer,
+            isPlaceholderCenter && { alignItems: "center" },
+          ]}
         >
-          {displayText}
-        </Text>
+          <Text style={value ? styles.textInput : styles.placeholder}>
+            {value || placeholder}
+          </Text>
+        </View>
       </Pressable>
     </View>
   );

@@ -10,7 +10,7 @@ Author: Joshua Swineford
 Date: 4-29-2026
 */
 import { Ionicons } from "@expo/vector-icons";
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import * as Crypto from "expo-crypto";
 import {
   View,
@@ -103,6 +103,10 @@ function AddressSelection({
     }
   };
 
+  const debouncedSearchText = useMemo(
+    () => debounce(onSearchTextChange, 600),
+    [],
+  ); // 0.6 second
   const handleRecentLocationPress = (item) => {
     if (item.type === "current_location") {
       setAddress({

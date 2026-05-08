@@ -15,7 +15,7 @@ Author: Joshua Swineford
 Date: 04-29-2026
 */
 
-import { View, Text, StyleSheet, Pressable, Modal, Alert, TouchableOpacity, TextInput, Keyboard, TouchableWithoutFeedback, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal, FlatList, Alert, TouchableOpacity, TextInput, Keyboard, TouchableWithoutFeedback, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useState, useEffect, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,11 +25,12 @@ import * as Location from "expo-location";
 import { getRecentLocations } from "../../services/recentLocationService";
 
 import {
-  getGoogleDistance,
+  getGoogleRoutes,
   getGoogleGasStationNearbyFromLocation,
   getGooglePlaceLongLat,
 } from "../../services/googleAPIService";
 
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { getAuth } from "firebase/auth";
 
 import VehicleSelection from "./VehicleSelection";
@@ -45,12 +46,18 @@ import {
   calcGasCost,
 } from "../../../../shared/utility/utils";
 
-// TODO: Create state for all the calculated estimate values to be passed to overview.
+const createStopObject = () => ({
+  id: Crypto.randomUUID(),
+  placeId: null,
+  text: null,
+});
+
 export default function HomeScreen({ userName }) {
   const MODAL_CONTEXT = {
     START_LOC: "start",
     END_LOC: "end",
     CAR_SELECT: "vehicle",
+    STOP_LOC: "stop",
   };
 
   const GOOGLE_PLACES_ENDPOINT = "https://places.googleapis.com/v1/places:autocomplete";
@@ -71,6 +78,8 @@ export default function HomeScreen({ userName }) {
 
   const [startLocation, setStartLocation] = useState("");
   const [destination, setDestination] = useState("");
+  const [stops, setStops] = useState([]);
+  const [selectedStop, setSelectedStop] = useState("");
   const [vehicle, setVehicle] = useState("");
   const [mpg, setMpg] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -111,33 +120,25 @@ export default function HomeScreen({ userName }) {
   }
 
 
+  const findCheapest = (ar) => {
+    let val = 999;
+
+    ar.forEach((element) => {
+      const regular = element.fuelOptions.fuelPrices.filter(
+        (gasType) => gasType.type == "REGULAR_UNLEADED",
+      );
+
+      const wholePrice = parseInt(regular[0].price.units);
+      const decimal = parseInt(regular[0].price.nanos) / 1000000000;
+
+      const price = wholePrice + decimal;
+
+      if (price < val) val = price;
+    });
+
+    return val;
+  };
   const onQuickCalc = async () => {
-    const findCheapest = (ar) => {
-      let val = 999;
-
-      ar.forEach((element) => {
-        const regular = element.fuelOptions.fuelPrices.filter(
-          (gasType) => gasType.type == "REGULAR_UNLEADED",
-        );
-
-        const wholePrice = parseInt(regular[0].price.units);
-        const decimal = parseInt(regular[0].price.nanos) / 1000000000;
-
-        const price = wholePrice + decimal;
-
-        if (price < val) val = price;
-      });
-
-      return val;
-    };
-
-    if (!startLocation || !destination) {
-      console.log("invalid start or destination");
-      return;
-    }
-
-    
-
     if (!longLat) {
       console.log("long lat invalid", longLat);
       return;
@@ -146,18 +147,29 @@ export default function HomeScreen({ userName }) {
     const filterStations = gasStations.filter((gas) => gas.fuelOptions);
     const cheapest = findCheapest(filterStations);
 
-    const routeDistance = await getGoogleDistance(
+    const intermediates = stops
+      .filter((stop) => stop.placeId)
+      .map((stop) => ({
+        placeId: stop.placeId,
+      }));
+
+    const routeDistance = await getGoogleRoutes(
       startLocation.placePrediction.placeId,
       destination.placePrediction.placeId,
+      intermediates,
     );
 
     const { distanceMeters, duration, polyline } = routeDistance.routes[0];
 
-    setEstimate(() => ({
+    const result = {
       distance: Math.ceil(metersToMiles(distanceMeters)),
       duration: Math.ceil(secondsToMinutes(duration)),
       gasPrice: cheapest,
       polylines: polyline,
+    };
+
+    setEstimate(result);
+    return result;
     }));
   };
   const handleUseMyLocation = async () => {
@@ -312,18 +324,19 @@ export default function HomeScreen({ userName }) {
     setSaveModalVisible(true);
   };
 
-  const onViewOverview = () => {
-    console.log("view overview pressed");
-    console.log(estimate);
+  const onSave = () => {};
 
-    if (estimate.polylines) {
-      navigation.navigate("Overview", {
-        estDetail: estimate,
-        pointA: startLocation,
-        pointB: destination,
-        car: vehicle,
-      });
-    }
+  const onViewOverview = async () => {
+    if (!startLocation || !destination || !vehicle) return;
+
+    const est = await onQuickCalc();
+
+    navigation.navigate("Overview", {
+      estDetail: est,
+      pointA: startLocation,
+      pointB: destination,
+      car: vehicle,
+    });
   };
 
   const onSelectVehicle = () => {
@@ -549,9 +562,63 @@ export default function HomeScreen({ userName }) {
       getLongLat();
   }, [startLocation]);
 
-  useEffect(() => {
-    if (!startLocation || !destination) return;
-  }, [startLocation, destination]);
+  // useEffect(() => {
+  //   if (!startLocation || !destination) return;
+  // }, [startLocation, destination]);
+
+  const handleAddStop = () => {
+    if (stops.length === 25) return;
+
+    setStops((prevStops) => [...prevStops, createStopObject()]);
+  };
+
+  const handleStopAddress = (item) => {
+    setStops((prevStops) => {
+      const newStops = prevStops.map((stop) => {
+        if (stop.id !== selectedStop) return stop;
+
+        return {
+          ...stop,
+          placeId: item.placePrediction.placeId,
+          text: item.placePrediction.text.text,
+        };
+      });
+
+      return newStops;
+    });
+  };
+
+  const onTrashPress = (id) => {
+    setStops((prevStops) => {
+      const newStops = prevStops.filter((stop) => stop.id != id);
+
+      return newStops;
+    });
+  };
+
+  const onStopChange = (id) => {
+    setSelectedStop(id);
+    setModalContext(MODAL_CONTEXT.STOP_LOC);
+    setIsModalVisible(true);
+  };
+
+  const renderStops = ({ item, index }) => (
+    <View style={styles.stopContainer}>
+      <SelectField
+        label={`Stop ${index + 1}`}
+        placeholder="Enter a stop"
+        handlePress={() => onStopChange(item.id)}
+        labelBgColor={DARK_THEME.primaryBackground}
+        containerStyle={{ flex: 1 }}
+        value={item.text}
+      />
+      <Pressable onPress={() => onTrashPress(item.id)}>
+        <View style={styles.trashContainer}>
+          <FontAwesome name="trash-o" size={24} color="#fafafa" />
+        </View>
+      </Pressable>
+    </View>
+  );
 
   useEffect(() => {
     return () => {
@@ -577,33 +644,65 @@ export default function HomeScreen({ userName }) {
           <Text style={styles.title}>{user?.email}</Text>
         </View>
 
-        <ScrollView
-          style={styles.formScroll}
-          contentContainerStyle={styles.formScrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.contentContainer}>
-            <View style={styles.contents}>
-              <Text style={styles.welcomeMsg}>Where do you want to go?</Text>
+        <View style={styles.contentContainer}>
+          <View style={styles.contents}>
+            <SelectField
+              label="Starting Location"
+              placeholder="Enter starting location"
+              handlePress={onStartLocationChange}
+              labelBgColor={DARK_THEME.primaryBackground}
+              value={startLocation && startLocation.placePrediction.text.text}
+            />
 
-              <View style={styles.startLocationBlock}>
-                <View style={styles.locationRow}>
-                  <View style={styles.locationInputWrapper}>
-                    <Text style={styles.inputLabel}>Start Location</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter starting location"
-                      placeholderTextColor={DARK_THEME.placeholder}
-                      value={startLocation?.placePrediction?.text?.text || ""}
-                      onFocus={() => setActiveLocationField("start")}
-                      onBlur={() => {
-                        setTimeout(() => setActiveLocationField(null), 250);
-                      }}
-                      onChangeText={(text) => {
-                        setActiveLocationField("start");
-                        handleAddressTyping("start", text);
-                      }}
-                    />
+            <SelectField
+              label="Destination"
+              placeholder="Enter destination"
+              handlePress={onDestinationChange}
+              labelBgColor={DARK_THEME.primaryBackground}
+              value={destination && destination.placePrediction.text.text}
+            />
+
+            {stops.length > 0 && (
+              <FlatList
+                style={styles.flatListContainer}
+                contentContainerStyle={styles.flatListContent}
+                data={stops}
+                renderItem={renderStops}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={true}
+              />
+            )}
+
+            <SelectField
+              placeholder="Add a stop +"
+              handlePress={handleAddStop}
+              labelBgColor={DARK_THEME.primaryBackground}
+              isPlaceholderCenter={true}
+            />
+
+            <SelectField
+              label="Vehicle"
+              placeholder="Select a vehicle"
+              handlePress={onSelectVehicle}
+              labelBgColor={DARK_THEME.primaryBackground}
+              value={
+                vehicle && `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+              }
+            />
+            {/* <Pressable onPress={onQuickCalc}>
+              <View style={styles.caclBtnContainer}>
+                <Text style={styles.calcBtn}>Quick calculate</Text>
+              </View>
+            </Pressable> */}
+
+            {/* {estimate && (
+              <View style={styles.quickEstimateContainer}>
+                <View style={styles.estimateDetail}>
+                  <View style={styles.estimateRow}>
+                    <Text style={styles.estimateLabel}>Distance: </Text>
+                    <Text style={styles.estimateData}>
+                      {Math.ceil(estimate.distance)} mi
+                    </Text>
                   </View>
 
                   <TouchableOpacity
@@ -816,6 +915,15 @@ export default function HomeScreen({ userName }) {
               setVisibility={setIsModalVisible}
               sessToken={sessionToken}
               setAddress={setDestination}
+              setSessToken={setSessionToken}
+            />
+          )}
+
+          {modalContext === MODAL_CONTEXT.STOP_LOC && (
+            <AddressSelection
+              setVisibility={setIsModalVisible}
+              sessToken={sessionToken}
+              setAddress={handleStopAddress}
               setSessToken={setSessionToken}
             />
           )}
@@ -1155,6 +1263,23 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  flatListContainer: {
+    height: 300,
+  },
+  flatListContent: {
+    gap: 10,
+    paddingVertical: 10,
+  },
+  stopContainer: {
+    flexDirection: "row",
+    flexGrow: 1,
+    gap: 10,
+    // backgroundColor: "pink",
+  },
+  trashContainer: {
+    // backgroundColor: "red",
+    justifyContent: "center",
+    flex: 1,
   formScroll: {
     flex: 1,
   },
