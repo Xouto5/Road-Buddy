@@ -31,7 +31,7 @@ import {
 } from "../../services/googleAPIService";
 
 import { getAuth } from "firebase/auth";
-
+import { getUserData } from "../../../../core/firebase/firebaseConfig";
 import VehicleSelection from "./VehicleSelection";
 import AddressSelection from "./AddressSelection";
 import SelectField from "../../../../shared/component/SelectField";
@@ -67,8 +67,8 @@ export default function HomeScreen({ userName }) {
   const navigation = useNavigation();
 
   const auth = getAuth();
-  const user = auth.currentUser;
-
+  var user = getFirstname();
+  var haveSentVerifacationNotice = false;
   const [startLocation, setStartLocation] = useState("");
   const [destination, setDestination] = useState("");
   const [vehicle, setVehicle] = useState("");
@@ -89,27 +89,63 @@ export default function HomeScreen({ userName }) {
   const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] = useState(false);
   const [recentLocations, setRecentLocations] = useState([]);
   const [activeLocationField, setActiveLocationField] = useState(null);
+  const [username, setUsername] = useState("");
 
   const debounceRef = useRef(null);
   const sessionTokenRef = useRef(`home-${Date.now()}`);
 
-  if(!isUserVerified){
-    Alert.alert(
+
+const hasRun = useRef(false);
+
+
+
+  // send alert for email verfication, will send every 15 seconds after dismissing
+  useEffect(() => {
+    if(!isUserVerified() && !hasRun.current){
+    hasRun.current = true;
+    setTimeout(() => {
+      Alert.alert(
       'Email is not verified',
-      'Please verify your email. Check your email for an existing link, or click send again to receive a new one',
+      'Please verify your email. Check your email for an existing link, or click send again to receive a new one. Please check your spam folder if it has not arrived.',
       [
         {
           text: 'Okay', 
         },
         {
           text: 'Send Again', 
-          onPress: () => verifyEmail
+          onPress: () => verifyEmail()
         },
       ],
       {cancelable: false},
       );
+    }, 5000);
+
+    setTimeout(() => {
+      haveSentVerifacationNotice = false;
+    }, 15000);
+
+  }
+  }), [];
+
+  function getFirstname(){
+    useEffect(() => {
+    const fetchData = async () => {
+    try {
+      const response = await getUserData();
+      const data = await response;
+      user = data.firstname
+      setUsername(user)
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  fetchData();
+}, []);
+  return user
   }
 
+  
 
   const onQuickCalc = async () => {
     const findCheapest = (ar) => {
@@ -574,7 +610,7 @@ export default function HomeScreen({ userName }) {
       <View style={styles.container}>
         <View style={styles.screenTitle}>
           <Text style={styles.title}>Welcome</Text> 
-          <Text style={styles.title}>{user?.email}</Text>
+          <Text style={styles.title}>{username}</Text>
         </View>
 
         <ScrollView
@@ -850,6 +886,8 @@ export default function HomeScreen({ userName }) {
     </SafeAreaView>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: {

@@ -104,19 +104,20 @@ export async function verifyEmail() {
   }
 }
 
-// CHECK EMAIL VERIFIED
+// CHECK EMAIL VERIFIED ||
 export function isUserVerified() {
-  return auth.currentUser?.emailVerified || false;
+  auth.currentUser.reload()
+  return auth.currentUser.emailVerified;
 }
 
 // LEGACY RESET (kept, but fixed)
-export async function callReset() {
+export async function callReset(email) {
   try {
     if (!auth.currentUser?.email) {
       throw new Error("No email available");
     }
 
-    await sendPasswordResetEmail(auth, auth.currentUser.email);
+    await sendPasswordResetEmail(auth, email);
     await logOut();
 
     return { success: true };

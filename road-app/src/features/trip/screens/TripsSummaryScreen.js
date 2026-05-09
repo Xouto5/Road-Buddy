@@ -8,7 +8,7 @@ Date: 02-24-2026
 */
 
 // Import necessary React hooks and React Native components
-import { useState } from "react"; // State management for expandable trips
+import { useState, useEffect, useRef } from "react"; // State management for expandable trips
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -22,6 +22,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { verifyEmail, isUserVerified } from "../../auth/services/authServices";
 import { DARK_THEME } from "../../../shared/style/ColorScheme"; // Consistent dark theme styling
+
+var haveSentVerifacationNotice = false;
+
 
 // Sample trip with mock data
 // TODO: Will need to be able to pull data from backend and update this structure accordingly
@@ -165,21 +168,37 @@ function TripSection({ title, items, onToggle }) {
 export default function TripsSummaryScreen({ navigation }) {
   const [trips, setTrips] = useState(sampleTrips);
 
-    if(!isUserVerified())
-    Alert.alert(
-    'Email is not verified',
-    'Please verify your email. Check your email for an existing link, or click send again to receive a new one',
-    [
-      {
-        text: 'Okay', 
-      },
-      {
-        text: 'Send Again', 
-        onPress: () => verifyEmail
-      },
-    ],
-    {cancelable: false},
-    );
+const hasRun = useRef(false);
+
+
+
+  // send alert for email verfication, will send every 15 seconds after dismissing
+  useEffect(() => {
+    if(!isUserVerified() && !hasRun.current){
+    hasRun.current = true;
+    setTimeout(() => {
+      Alert.alert(
+      'Email is not verified',
+      'Please verify your email. Check your email for an existing link, or click send again to receive a new one. Please check your spam folder if it has not arrived.',
+      [
+        {
+          text: 'Okay', 
+        },
+        {
+          text: 'Send Again', 
+          onPress: () => verifyEmail()
+        },
+      ],
+      {cancelable: false},
+      );
+    }, 5000);
+
+    setTimeout(() => {
+      haveSentVerifacationNotice = false;
+    }, 15000);
+
+  }
+  }), [];
 
   // Toggle function to expand/collapse trip details
   const toggleTrip = (id) => {

@@ -44,6 +44,9 @@ const PLACES_API_KEY =
   process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
   process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID;
 
+
+var haveSentVerifacationNotice = false;
+
 export default function EstimateScreen({ navigation, route }) {
   const [mpg, setMpg] = useState("");
   const [gasPrice, setGasPrice] = useState("");
@@ -62,22 +65,39 @@ export default function EstimateScreen({ navigation, route }) {
   const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] = useState(false);
   const debounceRef = useRef(null);
   const sessionTokenRef = useRef(`estimate-${Date.now()}`);
-    if(!isUserVerified()){
-    Alert.alert(
-    'Email is not verified',
-    'Please verify your email. Check your email for an existing link, or click send again to receive a new one',
-    [
-      {
-        text: 'Okay', 
-      },
-      {
-        text: 'Send Again', 
-        onPress: () => console.log(verifyEmail())
-      },
-    ],
-    {cancelable: false},
-    );
+
+const hasRun = useRef(false);
+
+
+
+  // send alert for email verfication, will send every 15 seconds after dismissing
+  useEffect(() => {
+    if(!isUserVerified() && !hasRun.current){
+    hasRun.current = true;
+    setTimeout(() => {
+      Alert.alert(
+      'Email is not verified',
+      'Please verify your email. Check your email for an existing link, or click send again to receive a new one. Please check your spam folder if it has not arrived.',
+      [
+        {
+          text: 'Okay', 
+        },
+        {
+          text: 'Send Again', 
+          onPress: () => verifyEmail()
+        },
+      ],
+      {cancelable: false},
+      );
+    }, 5000);
+
+    setTimeout(() => {
+      haveSentVerifacationNotice = false;
+    }, 15000);
+
   }
+  }), [];
+
 
   // Repopulate fields when returning from TripResults via Edit Trip
   useEffect(() => {

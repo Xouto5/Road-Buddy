@@ -81,7 +81,6 @@ export  async function getUserData(){
   const q = query(collection(db, "users"), where("userID", "==", auth.currentUser.uid));
 
 const querySnapshot = await getDocs(q);
-console.log(querySnapshot.docs[0].data().firstname)
 return querySnapshot.docs[0].data()
 }
 
