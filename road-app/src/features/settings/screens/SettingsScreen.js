@@ -66,17 +66,21 @@ export default function ProfileScreen() {
   const hasRun = useRef(false);
 
   useEffect(() => {
-    if (!isUserVerified() && !hasRun.current) {
-      hasRun.current = true;
-      setTimeout(() => {
-        Alert.alert(
-          'Email is not verified',
-          'Please verify your email. Check your email for an existing link, or click send again to receive a new one.',
-          [{ text: 'Okay' }, { text: 'Send Again', onPress: () => verifyEmail() }],
-          { cancelable: false },
-        );
-      }, 5000);
+    const checkVerification = async () => {
+        const verified = await isUserVerified();
+        if (!verified && !hasRun.current) {
+            hasRun.current = true;
+            setTimeout(() => {
+              Alert.alert(
+                'Email is not verified',
+                'Please verify your email. Check your email for an existing link, or click send again to receive a new one.',
+                [{ text: 'Okay' }, { text: 'Send Again', onPress: () => verifyEmail() }],
+                { cancelable: false },
+              );
+            }, 5000);
+        }
     }
+    checkVerification();
   }, []);
 
   const hasUnsavedChanges =
@@ -209,24 +213,9 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <View style={styles.screen}>
-        <View style={styles.topbar}>
-          <Image
-            source={require("../../../../assets/images/user-settings-icon.png")}
-            style={styles.iconSmall}
-            resizeMode="contain"
-          />
-          <Text style={styles.title}>Profile Settings</Text>
-          <Pressable
-            style={styles.infoBtn}
-            hitSlop={10}
-            onPress={() => navigation.navigate("AboutScreen")}
-          >
-            <Image
-              source={require("../../../../assets/images/info-icon.png")}
-              style={styles.iconSmall}
-              resizeMode="contain"
-            />
-          </Pressable>
+        <View style={styles.headerContainer}>
+          <Text style={styles.mainTitle}>User Settings</Text>
+          <Text style={styles.subTitle}>View and manage your account details.</Text>
         </View>
 
         <KeyboardAvoidingView
@@ -284,9 +273,26 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: COLORS.bg },
   screen: { flex: 1, backgroundColor: COLORS.bg },
-  topbar: { height: 64, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 },
-  iconSmall: { width: 28, height: 28, tintColor: COLORS.text },
-  title: { color: COLORS.text, fontSize: 20, fontWeight: "700" },
+  
+  headerContainer: {
+    paddingTop: 24,
+    paddingBottom: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mainTitle: {
+    color: COLORS.text,
+    fontSize: 28,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  subTitle: {
+    color: COLORS.placeholder,
+    fontSize: 15,
+    marginTop: 6,
+    textAlign: "center",
+  },
+
   content: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 26, paddingBottom: 40 },
   form: { flex: 1, width: "100%", maxWidth: 360, alignSelf: "center", justifyContent: "space-between" },
   inputGroup: { gap: 14 },
