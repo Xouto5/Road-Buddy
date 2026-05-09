@@ -9,6 +9,7 @@ AddressSelection Component updated to include recent locations
 Author: Joshua Swineford
 Date: 4-29-2026
 */
+
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useEffect, useRef } from "react";
 import * as Crypto from "expo-crypto";
@@ -50,8 +51,13 @@ function AddressSelection({
 
   useEffect(() => {
     const loadRecentLocations = async () => {
-      const recents = await getRecentLocations();
-      setRecentLocations(recents);
+      try {
+        const recents = await getRecentLocations();
+        setRecentLocations(recents || []);
+      } catch (error) {
+        console.log(error);
+        setRecentLocations([]);
+      }
     };
 
     loadRecentLocations();
@@ -64,14 +70,15 @@ function AddressSelection({
 
         if (trimmed.length > 2) {
           const result = await getGoogleAutocomplete(trimmed, sessToken);
-          setPlaces(result.suggestions || []);
+          setPlaces(result?.suggestions || []);
         } else {
           setPlaces([]);
         }
       } catch (error) {
         console.log(error);
+        setPlaces([]);
       }
-    }, 400); {/* the amount of milliseconds of delay after typing before making the API call, can adjust as needed */}
+    }, 400);
 
     return () => clearTimeout(timeoutId);
   }, [searchText, sessToken]);
@@ -79,7 +86,7 @@ function AddressSelection({
   useEffect(() => {
     const timeout = setTimeout(() => {
       inputRef.current?.focus();
-    }, 100); // small delay helps with modal timing
+    }, 100);
 
     return () => clearTimeout(timeout);
   }, []);
@@ -158,7 +165,8 @@ function AddressSelection({
   return (
     <View style={styles.container}>
       <View style={styles.textInputContainer}>
-        <Ionicons name="search" size={20} color={"#fafafa"} />
+        <Ionicons name="search" size={20} color="#fafafa" />
+
         <TextInput
           ref={inputRef}
           style={styles.textInput}
@@ -189,7 +197,9 @@ function AddressSelection({
         <FlatList
           data={places}
           renderItem={renderPlaces}
-          keyExtractor={(item) => item.placePrediction.placeId}
+          keyExtractor={(item, index) =>
+            item?.placePrediction?.placeId || `place-${index}`
+          }
           contentContainerStyle={styles.contentContainer}
         />
       )}

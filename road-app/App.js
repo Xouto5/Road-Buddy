@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import BottomNav from "./src/navigation/BottomNav";
 import TripResults from "./src/features/cost/screens/TripResults";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import AuthStack from "./src/navigation/AuthStack";
 import { onAuthStateChanged } from "firebase/auth";
@@ -31,23 +32,25 @@ export default function App() {
   }, []);
 
   return (
-    <NavigationContainer>
-      {isAuthenticated ? (
-        <Stack.Navigator>
-          <Stack.Screen
-            name="Home"
-            component={BottomNav}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="TripResults"
-            component={TripResults}
-            options={{ headerShown: false }}
-          />
-        </Stack.Navigator>
-      ) : (
-        <AuthStack />
-      )}
-    </NavigationContainer>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer>
+        {isAuthenticated ? (
+          <Stack.Navigator>
+            <Stack.Screen
+              name="Home"
+              component={BottomNav}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="TripResults"
+              component={TripResults}
+              options={{ headerShown: false }}
+            />
+          </Stack.Navigator>
+        ) : (
+          <AuthStack />
+        )}
+      </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }
