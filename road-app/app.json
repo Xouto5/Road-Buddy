@@ -2,6 +2,7 @@
   "expo": {
     "name": "road-app",
     "slug": "road-app",
+    "scheme": "road-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

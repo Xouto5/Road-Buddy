@@ -1,18 +1,18 @@
 /* ======================================== //
 CREDITS:
-
 MANUEL: 
-
-
 // ======================================== */
 
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { initializeAuth } from "firebase/auth";
-import { getReactNativePersistence } from "@firebase/auth/dist/rn/index.js";
-import { getFirestore } from "firebase/firestore";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { doc, addDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore"; 
-import { getAuth } from "firebase/auth";
+import { 
+  getFirestore, 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  updateDoc,
+  addDoc
+} from "firebase/firestore"; 
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -22,23 +22,18 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Prevent re-initializing on fast refresh
+// Initialize Firebase App
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Firestore and Auth
+// Initialize Firestore
 export const db = getFirestore(app);
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
 
-// Firestore operations function
-// Change this function to accept name and email
 export const performFirestoreOperations = async (name, lastname, email, carType, phone) => {
   try {
-    const docRef = await addDoc(collection(db, "users"), {
-      firstname: name, // Save the name
+    await addDoc(collection(db, "users"), {
+      firstname: name,
       lastname: lastname,
-      email: email, // Save the email
+      email: email,
       carType: carType,
       phone: phone,
       isVerified: false,
@@ -47,42 +42,30 @@ export const performFirestoreOperations = async (name, lastname, email, carType,
   } catch (e) {
     console.error("Error processing Firestore operations: ", e);
   }
-
-  /* Testing for firestore operations
-  try {
-    const docRef = await addDoc(collection(db, "users"), {
-      first: "Ada",
-      last: "Lovelace",
-      born: 1815
-    });
-    console.log("Document written with ID: ", docRef.id);
-    
-    const secondDocRef = await addDoc(collection(db, "users"), {
-      first: "Alan",
-      middle: "Mathison",
-      last: "Turing",
-      born: 1912
-    });
-    console.log("Document written with ID: ", secondDocRef.id);
-    
-    const querySnapshot = await getDocs(collection(db, "users"));
-    querySnapshot.forEach((doc) => {
-      console.log(`${doc.id} => ${doc.data()}`);
-    });
-
-  } catch (e) {
-    console.error("Error processing Firestore operations: ", e);
-  }
-  */
 };
 
-export  async function getUserData(){
-  //load in User data
+export async function getUserData(){
+  if (!auth.currentUser) return null;
   const q = query(collection(db, "users"), where("userID", "==", auth.currentUser.uid));
-
-const querySnapshot = await getDocs(q);
-return querySnapshot.docs[0].data()
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.empty ? null : querySnapshot.docs[0].data();
 }
 
+export async function updateUserData(updatedData) {
+  try {
+    const q = query(collection(db, "users"), where("userID", "==", auth.currentUser.uid));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const userDocRef = querySnapshot.docs[0].ref;
+      await updateDoc(userDocRef, updatedData);
+    } else {
+      throw new Error("No user document found to update");
+    }
+  } catch (e) {
+    console.error("Error updating user data: ", e);
+    throw e;
+  }
+}
 
 export default app;

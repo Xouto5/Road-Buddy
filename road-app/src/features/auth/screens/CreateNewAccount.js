@@ -23,33 +23,24 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getAuth, createUserWithEmailAndPassword , sendEmailVerification} from "firebase/auth";
-// Shared dark theme colors used across app screens
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import { performFirestoreOperations } from "../../../core/firebase/firebaseConfig";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+.[^\s@]+$/;
 
 import { createUser } from "../services/authServices";
-// Temporary options for selecting a vehicle type
-const carListOptions = ["Sedan", "SUV", "Truck", "Van"];
 
 // Main Create Account screen component
 export default function CreateNewAccountScreen({ navigation }) {
-  // Form state for each registration field
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [carList, setCarList] = useState("");
-  const [isCarDropdownOpen, setIsCarDropdownOpen] = useState(false);
-  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  // UI / validation state
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Basic client-side validation
+  // Basic validation
   const validate = () => {
     if (!firstName.trim()) {
       setError("Please enter your first name.");
@@ -57,14 +48,6 @@ export default function CreateNewAccountScreen({ navigation }) {
     }
     if (!lastName.trim()) {
       setError("Please enter your last name.");
-      return false;
-    }
-    if (!carList) {
-      setError("Please select a vehicle type.");
-      return false;
-    }
-    if (!phone.trim()) {
-      setError("Please enter your phone number.");
       return false;
     }
     if (!email.trim() || !EMAIL_REGEX.test(email)) {
@@ -76,7 +59,7 @@ export default function CreateNewAccountScreen({ navigation }) {
       return false;
     }
 
-    // requirement: at least 6 characters
+    // Requirement: at least 6 characters
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return false;
@@ -89,9 +72,7 @@ export default function CreateNewAccountScreen({ navigation }) {
     return true;
   };
 
-  // Placeholder submit handler until auth service is connected
   const handleCreateAccount = async () => {
-    // Placeholder for account creation service integration.
     if (!validate()) return;
 
     setLoading(true);
@@ -103,20 +84,14 @@ export default function CreateNewAccountScreen({ navigation }) {
         password,
       );
 
-      performFirestoreOperations(firstName,lastName,email,"Camry",phone);
+      performFirestoreOperations(firstName, lastName, email, "", "");
       sendEmailVerification(auth.currentUser)
 
-
-      const user = userCredential.user;
-      
-      // Feedback / navigation after successful signup
       setLoading(false);
       Alert.alert("Account created", "Your account was created successfully.");
-      // Navigate back or to main/home screen:
       navigation.goBack();
     } catch (err) {
       setLoading(false);
-      // Map common Firebase errors to readable messages
       let message = "An error occurred while creating your account.";
       if (err.code) {
         switch (err.code) {
@@ -144,12 +119,6 @@ export default function CreateNewAccountScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.screen}
     >
-      {/* Commented out since Stack Screen comes with back screen
-	  Bryan Cardeno */}
-      {/* <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-				<Text style={styles.backText}>{"<"}</Text>
-			</TouchableOpacity> */}
-
       {/* Header bar with icon + screen title */}
       <View style={styles.header}>
         <View style={styles.headerIconCell}>
@@ -162,13 +131,12 @@ export default function CreateNewAccountScreen({ navigation }) {
         <Text style={styles.headerTitle}>Create Account</Text>
       </View>
 
-      {/* Scrollable form body for smaller screens and keyboard safety */}
+      {/* Scrollable form body */}
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Basic profile fields */}
         <TextInput
           style={styles.input}
           placeholder="First Name"
@@ -183,62 +151,6 @@ export default function CreateNewAccountScreen({ navigation }) {
           placeholderTextColor={DARK_THEME.placeholder}
           value={lastName}
           onChangeText={(t) => setLastName(t)}
-        />
-
-        {/* Car selector dropdown */}
-        <View style={styles.dropdownContainer}>
-          <TouchableOpacity
-            style={styles.dropdownTrigger}
-            onPress={() => setIsCarDropdownOpen((prev) => !prev)}
-            activeOpacity={0.85}
-          >
-            <Text
-              style={
-                carList
-                  ? styles.dropdownValueText
-                  : styles.dropdownPlaceholderText
-              }
-            >
-              {carList || "Car List"}
-            </Text>
-            <Ionicons
-              name={isCarDropdownOpen ? "chevron-up" : "chevron-down"}
-              size={16}
-              color={DARK_THEME.primaryText}
-            />
-          </TouchableOpacity>
-
-          {isCarDropdownOpen ? (
-            <View style={styles.dropdownMenu}>
-              {carListOptions.map((option, index) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[
-                    styles.dropdownOption,
-                    index === carListOptions.length - 1
-                      ? styles.dropdownOptionLast
-                      : null,
-                  ]}
-                  onPress={() => {
-                    setCarList(option);
-                    setIsCarDropdownOpen(false);
-                  }}
-                >
-                  <Text style={styles.dropdownOptionText}>{option}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : null}
-        </View>
-
-        {/* Contact and credential fields */}
-        <TextInput
-          style={styles.input}
-          placeholder="Phone"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={phone}
-          onChangeText={(t) => setPhone(t)}
-          keyboardType="phone-pad"
         />
 
         <TextInput
@@ -292,27 +204,12 @@ export default function CreateNewAccountScreen({ navigation }) {
   );
 }
 
-// Styles for Create New Account screen components
 const styles = StyleSheet.create({
-  // Root screen container
   screen: {
     flex: 1,
     backgroundColor: DARK_THEME.primaryBackground,
     paddingTop: 20,
   },
-  // Top-left back arrow, matching Login and Estimate screens
-  backButton: {
-    marginTop: 10,
-    marginBottom: 20,
-    marginLeft: 20,
-    alignSelf: "flex-start",
-  },
-  backText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 28,
-    fontWeight: "bold",
-  },
-  // Top header card
   header: {
     marginTop: 0,
     marginHorizontal: 18,
@@ -324,7 +221,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: DARK_THEME.primaryBackground,
   },
-  // Left icon cell in the header
   headerIconCell: {
     width: 46,
     height: "100%",
@@ -333,7 +229,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  // Header title text
   headerTitle: {
     marginLeft: 16,
     color: DARK_THEME.primaryText,
@@ -341,13 +236,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.3,
   },
-  // Scrollable content padding
   content: {
     paddingHorizontal: 28,
     paddingTop: 44,
     paddingBottom: 36,
   },
-  // Shared text input style
   input: {
     height: 40,
     borderWidth: 1,
@@ -359,57 +252,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: DARK_THEME.primaryBackground,
   },
-  // Container for dropdown field and expanded options
-  dropdownContainer: {
-    marginBottom: 12,
+  errorText: {
+    color: "#ff4444",
+    fontSize: 12,
+    marginBottom: 10,
+    textAlign: "center",
   },
-  // Dropdown trigger field
-  dropdownTrigger: {
-    height: 40,
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    backgroundColor: DARK_THEME.primaryBackground,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  // Placeholder text shown before user picks a car type
-  dropdownPlaceholderText: {
-    color: DARK_THEME.placeholder,
-    fontSize: 14,
-  },
-  // Selected value text in dropdown trigger
-  dropdownValueText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 14,
-  },
-  // Expanded dropdown menu card
-  dropdownMenu: {
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 6,
-    backgroundColor: DARK_THEME.modalBackground,
-  },
-  // Each selectable option row
-  dropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: DARK_THEME.primaryBorder,
-  },
-  // Option text style
-  dropdownOptionText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 14,
-  },
-  // Remove divider from last menu item
-  dropdownOptionLast: {
-    borderBottomWidth: 0,
-  },
-  // Main submit button style
   createButton: {
     marginTop: 6,
     backgroundColor: DARK_THEME.primaryText,
@@ -418,7 +266,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  // Main submit button text
+  createButtonDisabled: {
+    opacity: 0.7,
+  },
   createButtonText: {
     color: DARK_THEME.primaryBackground,
     fontSize: 14,

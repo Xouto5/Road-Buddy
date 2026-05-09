@@ -25,7 +25,7 @@ Author: Nathan Rochel
 Date: 05-09-2026
 */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   View, 
   Text, 
@@ -36,6 +36,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { db, auth, getUserData } from "../../../../core/firebase/firebaseConfig";
 import { 
   collection, 
@@ -56,18 +57,24 @@ export default function HomeScreen({ navigation }) {
   
   const user = auth.currentUser;
 
-  //Fetching user profile data for name
-  useEffect(() => {
-    const fetchName = async () => {
-      try {
-        const data = await getUserData();
-        setFirstName(data?.firstname || user?.email?.split('@')[0] || "Buddy");
-      } catch (error) {
-        setFirstName("Buddy");
+  // UPDATED: Now uses useFocusEffect to refresh the name whenever the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      const fetchName = async () => {
+        try {
+          const data = await getUserData();
+          setFirstName(data?.firstname || user?.email?.split('@')[0] || "Buddy");
+        } catch (error) {
+          console.error("Error fetching updated name:", error);
+          setFirstName("Buddy");
+        }
+      };
+      
+      if (user) {
+        fetchName();
       }
-    };
-    fetchName();
-  }, [user]);
+    }, [user])
+  );
 
   //Fetching ONLY the most recent trip from Firestore
   useEffect(() => {
@@ -87,7 +94,6 @@ export default function HomeScreen({ navigation }) {
       if (!snapshot.empty) {
         setRecentTrip({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
       } else {
-        // If the most recent trip is deleted, this triggers and clears the UI
         setRecentTrip(null);
       }
       setLoading(false);
@@ -103,7 +109,6 @@ export default function HomeScreen({ navigation }) {
       }))
     : [];
 
-  // Helper to calculate the map region dynamically
   const getMapRegion = () => {
     if (points.length === 0) return null;
     const midPoint = points[Math.floor(points.length / 2)];
@@ -116,8 +121,6 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleNewTrip = () => navigation.navigate("Estimate");
-  
-  // FIX: Redirects to the "Trips" tab defined in BottomNav
   const handleHistoryPress = () => navigation.navigate("Trips");
 
   const handleRecentTripPress = () => {
@@ -157,7 +160,6 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
-        {/* HEADER SECTION */}
         <View style={styles.header}>
           <View>
             <Text style={styles.welcomeText}>Hello, {firstName}!</Text>
@@ -168,7 +170,6 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* QUICK ACTIONS ROW */}
         <View style={styles.quickActionRow}>
           <TouchableOpacity 
             style={styles.actionCard} 
@@ -191,7 +192,6 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* RECENT TRIP SECTION */}
         <View style={styles.recentSection}>
           <Text style={styles.sectionTitle}>Latest Trip</Text>
           
@@ -209,7 +209,6 @@ export default function HomeScreen({ navigation }) {
                   provider={PROVIDER_GOOGLE}
                   scrollEnabled={false}
                   zoomEnabled={false}
-                  // FIX: Using region prop ensures the map centers on new data in real-time
                   region={getMapRegion()} 
                 >
                   <Polyline coordinates={points} strokeColor={DARK_THEME.primaryText} strokeWidth={3} />
