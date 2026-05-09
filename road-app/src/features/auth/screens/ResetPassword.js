@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { resetPassword } from "../services/authServices";
 import {
   View,
   Text,
@@ -29,7 +30,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 
       // 🔥 Replace this later with real backend call
       // await resetPassword(email);
-
+      resetPassword(email);
       setModalMessage("Password reset link sent to your email");
       setModalVisible(true);
     } catch (error) {

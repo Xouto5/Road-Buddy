@@ -53,6 +53,9 @@ useEffect(() => {
   fetchData();
 }, []);
 
+
+  var haveSentVerifacationNotice = false;
+
   // Saved values
   const [username, setUsername] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -96,10 +99,18 @@ useEffect(() => {
   const [editingKey, setEditingKey] = useState(null);
   const isEditingAny = editingKey !== null;
 
-  if(!isUserVerified()){
-    Alert.alert(
+const hasRun = useRef(false);
+
+
+
+  // send alert for email verfication, will send every 15 seconds after dismissing
+  useEffect(() => {
+    if(!isUserVerified() && !hasRun.current){
+    hasRun.current = true;
+    setTimeout(() => {
+      Alert.alert(
       'Email is not verified',
-      'Please verify your email. Check your email for an existing link, or click send again to receive a new one',
+      'Please verify your email. Check your email for an existing link, or click send again to receive a new one. Please check your spam folder if it has not arrived.',
       [
         {
           text: 'Okay', 
@@ -111,7 +122,14 @@ useEffect(() => {
       ],
       {cancelable: false},
       );
+    }, 5000);
+
+    setTimeout(() => {
+      haveSentVerifacationNotice = false;
+    }, 15000);
+
   }
+  }), [];
 
   const hasUnsavedChanges =
     usernameDraft !== username ||
@@ -640,14 +658,7 @@ useEffect(() => {
                 
                  <View style={styles.bigSpacer} />
 
-                  <Pressable
-                  style={[
-                    styles.saveBtn,
-                  ]}
-                  onPress={callReset}
-                >
-                  <Text style={styles.saveBtnText}>Reset Password</Text>
-                </Pressable>
+                  
 
                 {hasUnsavedChanges && (
                   <Text style={styles.unsavedText}>
