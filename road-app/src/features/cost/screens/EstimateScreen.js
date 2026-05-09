@@ -13,8 +13,6 @@ BRIAN:  Modified screen as per parameters on ticket FE-2. Changed display title,
   
         Date completed: 04/26/2026
 
-GEMINI: Integrated "Edit Mode" logic and updated placeholders to match 
-        provided UI design reference.
 // ======================================== */
 
 import { useState, useEffect, useRef } from "react";
@@ -34,8 +32,9 @@ import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { geocodeAddress } from "../../trip/services/geocodeService";
 import { getDirections } from "../../trip/services/directionsService";
-import { milesToGallons, tripFuelCost, costPerMile } from "../services/calc";
+import { milesToGallons, tripFuelCost } from "../services/calc";
 import { verifyEmail, isUserVerified } from "../../auth/services/authServices";
+import { saveTrip } from "../../trip/services/tripServices";
 
 const GOOGLE_PLACES_ENDPOINT =
   "https://places.googleapis.com/v1/places:autocomplete";
@@ -252,6 +251,34 @@ export default function EstimateScreen({ navigation, route }) {
 
       const distance = directionsData.distanceMiles;
       const mpgNumber = parseFloat(mpg);
+      const totalCost = tripFuelCost(distance, mpgNumber, gasPriceNumber).toFixed(2);
+      const gallons = milesToGallons(distance, mpgNumber).toFixed(2);
+
+      if (isEditing && route.params?.tripId) {
+        const tripData = {
+          startLocation,
+          destination,
+          vehicle,
+          mpg,
+          distance: distance.toFixed(2),
+          duration: Math.ceil(directionsData.durationMinutes),
+          gasPrice: gasPriceNumber,
+          fuelType,
+          totalCost,
+          overviewPolyline: directionsData.polyline || ""
+        };
+
+        const result = await saveTrip(tripData, route.params.tripId);
+        if (result.success) {
+          navigation.navigate("TripResults", {
+            ...tripData,
+            tripId: route.params.tripId,
+            gallons,
+            titleOverride: "Trip Saved!" 
+          });
+          return;
+        }
+      }
 
       navigation.navigate("TripResults", {
         tripId: route.params?.tripId,
@@ -264,8 +291,8 @@ export default function EstimateScreen({ navigation, route }) {
         distance: distance.toFixed(2),
         duration: Math.ceil(directionsData.durationMinutes),
         overviewPolyline: directionsData.polyline || "",
-        gallons: milesToGallons(distance, mpgNumber).toFixed(2),
-        totalCost: tripFuelCost(distance, mpgNumber, gasPriceNumber).toFixed(2),
+        gallons,
+        totalCost,
       });
     } catch (error) {
       setValidationErrors({ calculation: "Calculation failed." });
@@ -376,7 +403,7 @@ export default function EstimateScreen({ navigation, route }) {
             {isEditing ? (
               <View style={styles.editButtonRow}>
                 <TouchableOpacity style={[styles.primaryButton, { flex: 1 }]} onPress={handleRecalculate}>
-                  <Text style={styles.primaryButtonText}>Update Trip</Text>
+                  <Text style={styles.primaryButtonText}>{calculationLoading ? "Updating..." : "Update Trip"}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.secondaryButton, { flex: 1 }]} onPress={resetForm}>
                   <Text style={styles.secondaryButtonText}>Cancel</Text>
@@ -384,7 +411,7 @@ export default function EstimateScreen({ navigation, route }) {
               </View>
             ) : (
               <TouchableOpacity style={styles.primaryButton} onPress={handleRecalculate}>
-                <Text style={styles.primaryButtonText}>Calculate</Text>
+                <Text style={styles.primaryButtonText}>{calculationLoading ? "Calculating..." : "Calculate"}</Text>
               </TouchableOpacity>
             )}
           </View>

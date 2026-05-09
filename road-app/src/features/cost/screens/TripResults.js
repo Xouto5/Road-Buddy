@@ -53,6 +53,7 @@ export default function TripResults({ route, navigation }) {
     gallons = "0.00",
     costPerMile = "0.00",
     totalCost = "0.00",
+    titleOverride = "Trip Results",
   } = route.params ?? {};
 
   const gasPriceNumber = parseFloat(String(gasPrice || "").replace(/[^0-9.]/g, ""));
@@ -129,7 +130,7 @@ export default function TripResults({ route, navigation }) {
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerContainer}>
-          <Text style={styles.title}>Trip Results</Text>
+          <Text style={styles.title}>{titleOverride}</Text>
           <Text style={styles.subtitle}>Here are your trip details.</Text>
         </View>
 
@@ -166,7 +167,6 @@ export default function TripResults({ route, navigation }) {
             <Text style={styles.primaryButtonText}>Show in Overview</Text>
           </TouchableOpacity>
 
-          {/* Conditional Rendering: Only show Save and Edit if NOT in Edit Mode */}
           {!isEditMode && (
             <View style={styles.buttonRow}>
               <TouchableOpacity
