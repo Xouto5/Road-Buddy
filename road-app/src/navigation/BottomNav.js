@@ -30,7 +30,7 @@ export default function BottomNav() {
     >
       <Tab.Screen
         name="Plan"
-        component={HomeScreen}
+        component={HomeScreen} // <-- Plan Screen
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
@@ -40,7 +40,7 @@ export default function BottomNav() {
       />
       <Tab.Screen
         name="Overview"
-        component={TripDetailsScreen}
+        component={TripDetailsScreen} // <-- Overview Screen
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
@@ -51,7 +51,7 @@ export default function BottomNav() {
 
       <Tab.Screen
         name="Trips"
-        component={TripsSummaryScreen}
+        component={TripsSummaryScreen} // <-- Trip History Screen
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
@@ -62,7 +62,7 @@ export default function BottomNav() {
 
       <Tab.Screen
         name="Estimate"
-        component={EstimateScreen}
+        component={EstimateScreen} // <-- Estimate Screen
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
@@ -73,7 +73,7 @@ export default function BottomNav() {
 
       <Tab.Screen
         name="Settings"
-        component={ProfileScreen}
+        component={ProfileScreen} // <-- Profile Settings Screen
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size }) => (

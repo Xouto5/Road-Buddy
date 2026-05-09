@@ -87,6 +87,7 @@ export default function HomeScreen({ navigation }) {
       if (!snapshot.empty) {
         setRecentTrip({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
       } else {
+        // If the most recent trip is deleted, this triggers and clears the UI
         setRecentTrip(null);
       }
       setLoading(false);
@@ -102,9 +103,22 @@ export default function HomeScreen({ navigation }) {
       }))
     : [];
 
+  // Helper to calculate the map region dynamically
+  const getMapRegion = () => {
+    if (points.length === 0) return null;
+    const midPoint = points[Math.floor(points.length / 2)];
+    return {
+      latitude: midPoint.latitude,
+      longitude: midPoint.longitude,
+      latitudeDelta: 0.1,
+      longitudeDelta: 0.1,
+    };
+  };
+
   const handleNewTrip = () => navigation.navigate("Estimate");
   
-  const handleHistoryPress = () => navigation.navigate("Plan");
+  // FIX: Redirects to the "Trips" tab defined in BottomNav
+  const handleHistoryPress = () => navigation.navigate("Trips");
 
   const handleRecentTripPress = () => {
     if (!recentTrip) return;
@@ -195,12 +209,8 @@ export default function HomeScreen({ navigation }) {
                   provider={PROVIDER_GOOGLE}
                   scrollEnabled={false}
                   zoomEnabled={false}
-                  initialRegion={{
-                    latitude: points[Math.floor(points.length / 2)].latitude,
-                    longitude: points[Math.floor(points.length / 2)].longitude,
-                    latitudeDelta: 0.1,
-                    longitudeDelta: 0.1,
-                  }}
+                  // FIX: Using region prop ensures the map centers on new data in real-time
+                  region={getMapRegion()} 
                 >
                   <Polyline coordinates={points} strokeColor={DARK_THEME.primaryText} strokeWidth={3} />
                 </MapView>

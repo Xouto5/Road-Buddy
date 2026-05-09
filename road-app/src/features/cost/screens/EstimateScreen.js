@@ -61,10 +61,8 @@ export default function EstimateScreen({ navigation, route }) {
   const [startSuggestions, setStartSuggestions] = useState([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [startAutocompleteLoading, setStartAutocompleteLoading] =
-    useState(false);
-  const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] =
-    useState(false);
+  const [startAutocompleteLoading, setStartAutocompleteLoading] = useState(false);
+  const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] = useState(false);
   const debounceRef = useRef(null);
   const sessionTokenRef = useRef(`estimate-${Date.now()}`);
 

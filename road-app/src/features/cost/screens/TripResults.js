@@ -34,10 +34,10 @@ const withAlpha = (hexColor, alpha) => {
 
 export default function TripResults({ route, navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
-  // Track the current trip ID to prevent duplicates if editing/resaving
+  // Track the current trip ID 
   const [currentTripId, setCurrentTripId] = useState(route.params?.tripId || null);
 
-  // Check if we are in Edit Mode based on the existence of a tripId
+  // Check if we are in Edit Mode
   const isEditMode = !!route.params?.tripId;
   
   const {
