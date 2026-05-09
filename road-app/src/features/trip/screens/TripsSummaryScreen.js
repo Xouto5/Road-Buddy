@@ -44,7 +44,7 @@ import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import polyline from "@mapbox/polyline";
 
-function TripSection({ title, items, onToggle, onDelete, onEdit }) {
+function TripSection({ title, items, onToggle, onDelete, onEdit, onMapPress }) {
   if (!items || items.length === 0) return null;
 
   return (
@@ -121,27 +121,32 @@ function TripSection({ title, items, onToggle, onDelete, onEdit }) {
               {item.expanded && (
                 <View style={styles.expandedContent}>
                   {points.length > 0 ? (
-                    <MapView
-                      style={styles.mapPreview}
-                      provider={PROVIDER_GOOGLE}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
-                      pitchEnabled={false}
-                      rotateEnabled={false}
-                      initialRegion={{
-                        latitude: points[Math.floor(points.length / 2)].latitude,
-                        longitude:
-                          points[Math.floor(points.length / 2)].longitude,
-                        latitudeDelta: 0.1,
-                        longitudeDelta: 0.1,
-                      }}
+                    <TouchableOpacity 
+                      activeOpacity={0.9} 
+                      onPress={() => onMapPress(item)}
                     >
-                      <Polyline
-                        coordinates={points}
-                        strokeColor={DARK_THEME.primaryText}
-                        strokeWidth={3}
-                      />
-                    </MapView>
+                      <MapView
+                        style={styles.mapPreview}
+                        provider={PROVIDER_GOOGLE}
+                        scrollEnabled={false}
+                        zoomEnabled={false}
+                        pitchEnabled={false}
+                        rotateEnabled={false}
+                        initialRegion={{
+                          latitude: points[Math.floor(points.length / 2)].latitude,
+                          longitude:
+                            points[Math.floor(points.length / 2)].longitude,
+                          latitudeDelta: 0.1,
+                          longitudeDelta: 0.1,
+                        }}
+                      >
+                        <Polyline
+                          coordinates={points}
+                          strokeColor={DARK_THEME.primaryText}
+                          strokeWidth={3}
+                        />
+                      </MapView>
+                    </TouchableOpacity>
                   ) : (
                     <View style={styles.mapPlaceholder}>
                       <Text style={styles.detailText}>
@@ -240,6 +245,37 @@ export default function TripsSummaryScreen({ navigation }) {
     });
   };
 
+  const handleMapPress = (trip) => {
+    // Navigate to Overview with the trip's parameters
+    navigation.navigate("Home", {
+      screen: "Overview",
+      params: {
+        estDetail: {
+          distance: parseFloat(trip.distance) || 0,
+          duration: parseInt(trip.duration) || 0,
+          gasPrice: parseFloat(trip.gasPrice) || 0,
+          polylines: {
+            encodedPolyline: trip.overviewPolyline,
+          },
+        },
+        pointA: {
+          placePrediction: {
+            text: { text: trip.startLocation },
+          },
+        },
+        pointB: {
+          placePrediction: {
+            text: { text: trip.destination },
+          },
+        },
+        car: {
+          mpg_combined: parseFloat(trip.mpg) || 25,
+          label: trip.vehicle || "Vehicle",
+        },
+      },
+    });
+  };
+
   const handleDelete = (id) => {
     Alert.alert("Delete Trip", "Are you sure you want to discard this trip?", [
       {
@@ -285,6 +321,7 @@ export default function TripsSummaryScreen({ navigation }) {
             onToggle={toggleTrip}
             onDelete={handleDelete}
             onEdit={handleEdit}
+            onMapPress={handleMapPress}
           />
 
           {trips.length === 0 && (

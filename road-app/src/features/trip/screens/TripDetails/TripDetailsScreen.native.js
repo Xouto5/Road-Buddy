@@ -37,6 +37,8 @@ export default function TripDetailsScreen({ route }) {
 
   const bottomSheetRef = useRef(null);
 
+  const { tripId = null } = route.params ?? {};
+
   const [polylines, setPolylines] = useState([]);
   const [estimate, setEstimate] = useState(null);
   const [initRegion, setInitRegion] = useState({
@@ -252,14 +254,17 @@ export default function TripDetailsScreen({ route }) {
                 </View>
               </Pressable>
 
-              <Pressable
-                style={styles.btnContainer}
-                onPress={() => console.log("save pressed")}
-              >
-                <View style={styles.bottomSheetBtn}>
-                  <Text style={styles.calcBtn}>Save Trip</Text>
-                </View>
-              </Pressable>
+              {/* Only show Save Trip if the trip is not yet saved in database */}
+              {!tripId && (
+                <Pressable
+                  style={styles.btnContainer}
+                  onPress={() => console.log("save pressed")}
+                >
+                  <View style={styles.bottomSheetBtn}>
+                    <Text style={styles.calcBtn}>Save Trip</Text>
+                  </View>
+                </Pressable>
+              )}
 
               <Pressable
                 style={styles.btnContainer}

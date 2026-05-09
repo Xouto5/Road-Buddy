@@ -105,15 +105,20 @@ const hasRun = useRef(false);
   // Repopulate fields when returning from TripResults via Edit Trip
   useEffect(() => {
     const p = route?.params;
-    console.log(p);
     if (!p) return;
+
+    // FIX: Only update params if the tripId actually changed to avoid infinite loop
+    if (p.tripId !== undefined && p.tripId !== route.params?.tripId) {
+      navigation.setParams({ tripId: p.tripId });
+    }
+
     if (p.startLocation !== undefined) setStartLocation(p.startLocation);
     if (p.destination !== undefined) setDestination(p.destination);
     if (p.vehicle !== undefined) setVehicle(p.vehicle);
     if (p.mpg !== undefined) setMpg(p.mpg);
     if (p.gasPrice !== undefined) setGasPrice(p.gasPrice);
     if (p.fuelType !== undefined) setFuelType(p.fuelType);
-  }, [route?.params]);
+  }, [route?.params?.tripId, route?.params?.startLocation]); // More specific dependencies
 
   const handleUseMyLocation = async () => {
     try {
@@ -405,6 +410,7 @@ const hasRun = useRef(false);
         totalTripCost !== null ? totalTripCost.toFixed(2) : "0.00";
 
       navigation.navigate("TripResults", {
+        tripId: route.params?.tripId, // CARRY ID FORWARD
         startLocation,
         destination,
         vehicle,
@@ -439,20 +445,12 @@ const hasRun = useRef(false);
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Commented out since the bottom nav has been implemented. Bryan Cardeno */}
-          {/* <TouchableOpacity style={styles.backButton} onPress={() => navigation?.goBack?.()}>
-          <Text style={styles.backText}>{"<"}</Text>
-        </TouchableOpacity> */}
-
           <View style={styles.headerContainer}>
-            {/* Display title: "Estimate your Trip" at the top of the screen. */}
             <Text style={styles.title}>Estimate Your Trip</Text>
-            {/* Display supporting text: "Enter trip details below." under the title. */}
             <Text style={styles.subtitle}>Enter trip details below.</Text>
           </View>
 
           <View style={styles.inputContainer}>
-            {/* Start Location input labeled "Start location". */}
             <Text style={styles.label}>Start location</Text>
             <View style={styles.locationRow}>
               <TextInput
@@ -474,8 +472,6 @@ const hasRun = useRef(false);
                   }));
                 }}
               />
-              {/* Include "Use my location" button to the right of the input field. */}
-              {/* TODO: When pressed, request location permission and autofill using GPS. */}
               <TouchableOpacity
                 style={[
                   styles.locationButton,
@@ -519,7 +515,6 @@ const hasRun = useRef(false);
               </Text>
             ) : null}
 
-            {/* Destination input labeled "Destination" below start location. */}
             <Text style={styles.label}>Destination</Text>
             <TextInput
               style={[
@@ -562,7 +557,6 @@ const hasRun = useRef(false);
 
             <View style={styles.inlineRow}>
               <View style={styles.inlineLeft}>
-                {/* Vehicle input labeled "Vehicle". */}
                 <Text style={styles.label}>Vehicle</Text>
                 <TextInput
                   style={[styles.input, styles.inlineInput]}
@@ -573,9 +567,7 @@ const hasRun = useRef(false);
                 />
               </View>
               <View style={styles.inlineRight}>
-                {/* Include MPG input field next to vehicle input. */}
                 <Text style={styles.label}>MPG</Text>
-                {/* MPG should allow manual input from the user. */}
                 <TextInput
                   style={[
                     styles.input,
@@ -598,9 +590,6 @@ const hasRun = useRef(false);
             </View>
 
             <Text style={styles.label}>Gas Price (per gallon)</Text>
-            {/* Provide selectable buttons: Regular, Premium, Diesel. */}
-            {/* Only one option can be selected at a time. */}
-            {/* Selected option should be visually highlighted. */}
             <View style={styles.fuelTypeRow}>
               {["Regular", "Premium", "Diesel"].map((type) => (
                 <TouchableOpacity
@@ -623,8 +612,6 @@ const hasRun = useRef(false);
               ))}
             </View>
             <View style={styles.locationRow}>
-              {/* Provide input field labeled "Gas Price (per gallon)". */}
-              {/* If user manually edits the gas price, it should override autofill! */}
               <TextInput
                 style={[
                   styles.input,
@@ -644,8 +631,6 @@ const hasRun = useRef(false);
                 }}
                 keyboardType="numeric"
               />
-              {/* Include button "Use local price" next to gas price input. */}
-              {/* TODO: When pressed, autofill gas price value (use of API). */}
               <TouchableOpacity
                 style={[
                   styles.locationButton,
@@ -670,11 +655,6 @@ const hasRun = useRef(false);
             </Text>
           ) : null}
 
-          {/* Add "Calculate" button at the bottom of the screen. */}
-          {/* This should be the primary button and visually emphasized. */}
-          {/* When pressed, validate required inputs before proceeding. */}
-          {/* If valid, navigate to a new Results screen. */}
-          {/* Do not display results on the same screen. */}
           <View style={styles.calculateContainer}>
             <TouchableOpacity
               style={[
@@ -704,15 +684,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 16,
     paddingBottom: 40,
-  },
-  backButton: {
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  backText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 28,
-    fontWeight: "bold",
   },
   headerContainer: {
     marginBottom: 28,
@@ -833,22 +804,6 @@ const styles = StyleSheet.create({
     color: DARK_THEME.primaryBackground,
     fontSize: 16,
     fontWeight: "bold",
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    marginBottom: 20,
-  },
-  inputFlex: {
-    flex: 1,
-    marginBottom: 0,
-    marginRight: 8,
-  },
-  locationError: {
-    color: DARK_THEME.primaryBorder,
-    fontSize: 13,
-    marginBottom: 12,
-    marginTop: -10,
   },
   fieldError: {
     color: "#EF4444",

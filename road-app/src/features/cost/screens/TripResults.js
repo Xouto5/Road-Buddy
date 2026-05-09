@@ -34,7 +34,9 @@ const withAlpha = (hexColor, alpha) => {
 
 export default function TripResults({ route, navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
+  // Track the current trip ID to prevent duplicates if editing/resaving
   const [currentTripId, setCurrentTripId] = useState(route.params?.tripId || null);
+  
   const {
     startLocation = "",
     destination = "",
@@ -193,7 +195,16 @@ export default function TripResults({ route, navigation }) {
               onPress={() =>
                 navigation.navigate("Home", {
                   screen: "Estimate",
-                  params: { tripId: currentTripId, startLocation, destination, vehicle, mpg, gasPrice, fuelType, distance },
+                  params: { 
+                    tripId: currentTripId, // PASS ID BACK TO ESTIMATE
+                    startLocation, 
+                    destination, 
+                    vehicle, 
+                    mpg, 
+                    gasPrice, 
+                    fuelType, 
+                    distance 
+                  },
                 })
               }
             >
@@ -219,7 +230,7 @@ export default function TripResults({ route, navigation }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
-          <Pressable style={styles.modalBox} onPress={() => {}}>
+          <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Saved Trip!</Text>
             <Text style={styles.modalMessage}>Go to Trips to see your saved trips.</Text>
             <TouchableOpacity
@@ -228,7 +239,7 @@ export default function TripResults({ route, navigation }) {
             >
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
     </SafeAreaView>
