@@ -61,9 +61,9 @@ export default function HomeScreen({ navigation }) {
     const fetchName = async () => {
       try {
         const data = await getUserData();
-        setFirstName(data?.firstname || user?.email?.split('@')[0] || "Traveler");
+        setFirstName(data?.firstname || user?.email?.split('@')[0] || "Buddy");
       } catch (error) {
-        setFirstName("Traveler");
+        setFirstName("Buddy");
       }
     };
     fetchName();

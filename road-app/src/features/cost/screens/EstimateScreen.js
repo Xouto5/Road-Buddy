@@ -62,6 +62,7 @@ export default function EstimateScreen({ navigation, route }) {
   const [calculationLoading, setCalculationLoading] = useState(false);
   const [startSuggestions, setStartSuggestions] = useState([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
   const [startAutocompleteLoading, setStartAutocompleteLoading] =
     useState(false);
   const [destinationAutocompleteLoading, setDestinationAutocompleteLoading] =
@@ -107,6 +108,11 @@ const hasRun = useRef(false);
     const p = route?.params;
     if (!p) return;
 
+    // If a tripId exists, we are in edit mode
+    if (p.tripId) {
+        setIsEditing(true);
+    }
+
     // FIX: Only update params if the tripId actually changed to avoid infinite loop
     if (p.tripId !== undefined && p.tripId !== route.params?.tripId) {
       navigation.setParams({ tripId: p.tripId });
@@ -119,6 +125,27 @@ const hasRun = useRef(false);
     if (p.gasPrice !== undefined) setGasPrice(p.gasPrice);
     if (p.fuelType !== undefined) setFuelType(p.fuelType);
   }, [route?.params?.tripId, route?.params?.startLocation]); // More specific dependencies
+
+  const resetForm = () => {
+    setStartLocation("");
+    setDestination("");
+    setVehicle("");
+    setMpg("");
+    setGasPrice("");
+    setFuelType("Regular");
+    setValidationErrors({});
+    setIsEditing(false);
+    // Clear route params so it doesn't trigger useEffect again
+    navigation.setParams({ 
+        tripId: undefined, 
+        startLocation: undefined, 
+        destination: undefined,
+        vehicle: undefined,
+        mpg: undefined,
+        gasPrice: undefined,
+        fuelType: undefined
+    });
+  };
 
   const handleUseMyLocation = async () => {
     try {
@@ -409,8 +436,15 @@ const hasRun = useRef(false);
       const totalCostDisplay =
         totalTripCost !== null ? totalTripCost.toFixed(2) : "0.00";
 
+      const tripIdToPass = route.params?.tripId;
+
+      // If we are editing, we reset form state after navigation
+      if (isEditing) {
+          setIsEditing(false);
+      }
+
       navigation.navigate("TripResults", {
-        tripId: route.params?.tripId, // CARRY ID FORWARD
+        tripId: tripIdToPass, // CARRY ID FORWARD
         startLocation,
         destination,
         vehicle,
@@ -446,8 +480,12 @@ const hasRun = useRef(false);
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.headerContainer}>
-            <Text style={styles.title}>Estimate Your Trip</Text>
-            <Text style={styles.subtitle}>Enter trip details below.</Text>
+            <Text style={styles.title}>
+              {isEditing ? "Edit Your Trip" : "Estimate Your Trip"}
+            </Text>
+            <Text style={styles.subtitle}>
+              {isEditing ? "Update your trip details below." : "Enter trip details below."}
+            </Text>
           </View>
 
           <View style={styles.inputContainer}>
@@ -656,18 +694,42 @@ const hasRun = useRef(false);
           ) : null}
 
           <View style={styles.calculateContainer}>
-            <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                calculationLoading && styles.primaryButtonDisabled,
-              ]}
-              onPress={handleRecalculate}
-              disabled={calculationLoading}
-            >
-              <Text style={styles.primaryButtonText}>
-                {calculationLoading ? "Calculating…" : "Calculate"}
-              </Text>
-            </TouchableOpacity>
+            {isEditing ? (
+              <View style={styles.editButtonRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    { flex: 1 },
+                    calculationLoading && styles.primaryButtonDisabled,
+                  ]}
+                  onPress={handleRecalculate}
+                  disabled={calculationLoading}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {calculationLoading ? "Saving…" : "Edit Trip"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.secondaryButton, { flex: 1 }]}
+                  onPress={resetForm}
+                >
+                  <Text style={styles.secondaryButtonText}>Cancel Edit</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  calculationLoading && styles.primaryButtonDisabled,
+                ]}
+                onPress={handleRecalculate}
+                disabled={calculationLoading}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {calculationLoading ? "Calculating…" : "Calculate"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -805,6 +867,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder,
+    paddingVertical: 16,
+    borderRadius: 10,
+    alignItems: "center",
+    minHeight: 52,
+    justifyContent: "center",
+  },
+  secondaryButtonText: {
+    color: DARK_THEME.primaryText,
+    fontSize: 16,
+    fontWeight: "600",
+  },
   fieldError: {
     color: "#EF4444",
     fontSize: 13,
@@ -845,4 +921,8 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  editButtonRow: {
+    flexDirection: "row",
+    gap: 12,
+  }
 });
