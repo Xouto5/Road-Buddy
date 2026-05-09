@@ -58,6 +58,9 @@ import {
   secondsToMinutes,
 } from "../../../../shared/utility/utils";
 
+import { geocodeAddress } from "../../services/geocodeService";
+import { getDirections } from "../../services/directionsService";
+
 const createStopObject = () => ({
   id: Crypto.randomUUID(),
   placeId: null,
@@ -305,65 +308,43 @@ export default function HomeScreen({ userName }) {
 
   const handleStartTrip = async () => {
     try {
-      if (!startLocation || !destination || !vehicle) {
+      const startText = getLocationText(startLocation);
+      const destinationText = getLocationText(destination);
+
+      if (!startText || !destinationText || !vehicle) {
         Alert.alert(
           "Missing Trip Info",
-          "Please select a starting location, destination, and vehicle."
+          "Please enter a starting location, destination, and vehicle."
         );
         return;
       }
 
-      if (!destination?.placePrediction?.placeId) {
-        Alert.alert("Missing Destination", "Please select a valid destination.");
-        return;
-      }
+      const startCoords =
+        startLocation?.isCurrentLocation && startLocation?.coordinates
+          ? {
+              lat: startLocation.coordinates.latitude,
+              lng: startLocation.coordinates.longitude,
+            }
+          : await geocodeAddress(startText);
 
-      if (startLocation?.isCurrentLocation && startLocation?.coordinates) {
-        Alert.alert(
-          "Current Location Selected",
-          "Starting a trip from current location is not supported by this route service yet. Please select a saved place instead."
-        );
-        return;
-      }
+      const destCoords = await geocodeAddress(destinationText);
 
-      if (!startLocation?.placePrediction?.placeId) {
-        Alert.alert(
-          "Missing Starting Location",
-          "Please select a valid starting location."
-        );
-        return;
-      }
+      const directionsData = await getDirections({
+        origin: {
+          lat: startCoords.lat,
+          lng: startCoords.lng,
+        },
+        destination: {
+          lat: destCoords.lat,
+          lng: destCoords.lng,
+        },
+      });
+
+      const distance = directionsData.distanceMiles;
+      const duration = directionsData.durationMinutes;
 
       const filterStations = gasStations.filter((gas) => gas.fuelOptions);
       const cheapest = findCheapest(filterStations);
-
-      const intermediates = stops
-        .filter((stop) => stop.placeId)
-        .map((stop) => ({
-          placeId: stop.placeId,
-        }));
-
-      const routeDistance = await getGoogleRoutes(
-        startLocation.placePrediction.placeId,
-        destination.placePrediction.placeId,
-        intermediates
-      );
-
-      const route = routeDistance?.routes?.[0];
-
-      if (!route) {
-        Alert.alert("Route Error", "Could not calculate this route.");
-        return;
-      }
-
-      const { distanceMeters, duration, polyline } = route;
-
-      const estDetail = {
-        distance: Math.ceil(metersToMiles(distanceMeters)),
-        duration: Math.ceil(secondsToMinutes(duration)),
-        gasPrice: cheapest,
-        polylines: polyline,
-      };
 
       const vehicleLabel =
         typeof vehicle === "string"
@@ -372,34 +353,46 @@ export default function HomeScreen({ userName }) {
               vehicle?.model || ""
             }`.trim();
 
+      const mpgValue =
+        typeof vehicle === "object"
+          ? Number(vehicle?.mpg_combined) || 25
+          : Number(mpg) || 25;
+
       navigation.navigate("Overview", {
-        estDetail,
+        estDetail: {
+          distance: Number.isFinite(distance) ? Math.ceil(distance) : 0,
+          duration: Number.isFinite(duration) ? Math.ceil(duration) : 0,
+          gasPrice: cheapest || 0,
+          polylines: {
+            encodedPolyline: directionsData.polyline || "",
+          },
+        },
         pointA: {
           placePrediction: {
             text: {
-              text:
-                startLocation?.placePrediction?.text?.text || "Unknown start",
+              text: startText || "Unknown start",
             },
           },
         },
         pointB: {
           placePrediction: {
             text: {
-              text:
-                destination?.placePrediction?.text?.text ||
-                "Unknown destination",
+              text: destinationText || "Unknown destination",
             },
           },
         },
         car: {
           ...(typeof vehicle === "object" && vehicle ? vehicle : {}),
-          label: vehicleLabel,
-          mpg_combined: Number(vehicle?.mpg_combined || mpg) || 25,
+          label: vehicleLabel || "Vehicle",
+          mpg_combined: mpgValue,
         },
       });
     } catch (error) {
       console.error("Start trip error:", error);
-      Alert.alert("Trip Error", "Could not start this trip.");
+      Alert.alert(
+        "Trip Error",
+        error.message || "Could not start this trip."
+      );
     }
   };
 
