@@ -47,6 +47,7 @@ import {
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { getAuth } from "firebase/auth";
 import { getUserData } from "../../../../core/firebase/firebaseConfig";
+
 import VehicleSelection from "./VehicleSelection";
 import AddressSelection from "./AddressSelection";
 import SelectField from "../../../../shared/component/SelectField";
@@ -90,8 +91,8 @@ export default function HomeScreen({ userName }) {
   const navigation = useNavigation();
 
   const auth = getAuth();
-  var user = getFirstname();
-  var haveSentVerifacationNotice = false;
+  const user = auth.currentUser;
+
   const [startLocation, setStartLocation] = useState("");
   const [destination, setDestination] = useState("");
   const [stops, setStops] = useState([]);
@@ -133,64 +134,45 @@ export default function HomeScreen({ userName }) {
   };
 
   useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const data = await getUserData();
+        setUsername(data?.firstname || user?.email || "");
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setUsername(user?.email || "");
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
+
+  useEffect(() => {
     if (emailVerificationAlertShownRef.current) return;
     if (!user) return;
     if (isUserVerified()) return;
 
-    emailVerificationAlertShownRef.current = true;
+    const timer = setTimeout(() => {
+      emailVerificationAlertShownRef.current = true;
 
-
-const hasRun = useRef(false);
-
-
-
-  // send alert for email verfication, will send every 15 seconds after dismissing
-  useEffect(() => {
-    if(!isUserVerified() && !hasRun.current){
-    hasRun.current = true;
-    setTimeout(() => {
       Alert.alert(
-      'Email is not verified',
-      'Please verify your email. Check your email for an existing link, or click send again to receive a new one. Please check your spam folder if it has not arrived.',
-      [
-        {
-          text: "Okay",
-        },
-        {
-          text: 'Send Again', 
-          onPress: () => verifyEmail()
-        },
-      ],
-      {cancelable: false},
+        "Email is not verified",
+        "Please verify your email. Check your email for an existing link, or click send again to receive a new one. Please check your spam folder if it has not arrived.",
+        [
+          {
+            text: "Okay",
+          },
+          {
+            text: "Send Again",
+            onPress: () => verifyEmail(),
+          },
+        ],
+        { cancelable: false }
       );
     }, 5000);
 
-    setTimeout(() => {
-      haveSentVerifacationNotice = false;
-    }, 15000);
-
-  }
-  }), [];
-
-  function getFirstname(){
-    useEffect(() => {
-    const fetchData = async () => {
-    try {
-      const response = await getUserData();
-      const data = await response;
-      user = data.firstname
-      setUsername(user)
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  };
-
-  fetchData();
-}, []);
-  return user
-  }
-
-  
+    return () => clearTimeout(timer);
+  }, [user]);
 
   const findCheapest = (ar) => {
     let val = 999;
@@ -418,10 +400,7 @@ const hasRun = useRef(false);
       });
     } catch (error) {
       console.error("Start trip error:", error);
-      Alert.alert(
-        "Trip Error",
-        error.message || "Could not start this trip."
-      );
+      Alert.alert("Trip Error", error.message || "Could not start this trip.");
     }
   };
 
@@ -883,7 +862,7 @@ const hasRun = useRef(false);
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <View style={styles.container}>
         <View style={styles.screenTitle}>
-          <Text style={styles.title}>Welcome</Text> 
+          <Text style={styles.title}>Welcome</Text>
           <Text style={styles.title}>{username}</Text>
         </View>
 
@@ -1014,8 +993,6 @@ const hasRun = useRef(false);
     </SafeAreaView>
   );
 }
-
-
 
 const styles = StyleSheet.create({
   container: {
