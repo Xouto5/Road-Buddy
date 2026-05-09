@@ -15,7 +15,7 @@ BRIAN:  Modified screen as per parameters on ticket FE-2. Changed display title,
 
 // ======================================== */
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import * as Location from "expo-location";
 import {
   View,
