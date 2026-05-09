@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -18,7 +18,6 @@ import * as Google from "expo-auth-session/providers/google";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import {
   loginUser,
-  observeAuthState,
   handleGoogleAuth,
 } from "../services/authServices";
 
@@ -59,16 +58,22 @@ export default function LoginScreen({ navigation }) {
     setShowError(false);
     setErrors({ username: false, password: false });
 
+    // Validation Check
     if (!username || !password) {
       setShowError(true);
       setErrors({ username: !username, password: !password });
+      setFailedAttempts((prev) => prev + 1);
       return;
     }
 
     try {
+      // Attempt Authentication
       const result = await loginUser(username.trim(), password);
 
-      if (!result || result.success === false) {
+      if (result && result.success) {
+        setFailedAttempts(0);
+        console.log("Login successful");
+      } else {
         setFailedAttempts((prev) => prev + 1);
         setErrors({ username: true, password: true });
         setShowError(true);
@@ -78,6 +83,7 @@ export default function LoginScreen({ navigation }) {
       setFailedAttempts((prev) => prev + 1);
       setErrors({ username: true, password: true });
       setModalVisible(true);
+      console.error("Login Error:", error);
     }
   };
 
@@ -152,6 +158,7 @@ export default function LoginScreen({ navigation }) {
           />
         </View>
 
+        {/* Guidance text appears after 3 failed attempts */}
         {failedAttempts >= 3 && (
           <Text style={styles.guidanceText}>
             Having trouble? Try resetting your password.
@@ -181,7 +188,10 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <TouchableOpacity onPress={() => navigation.navigate("ResetPassword")}>
-          <Text style={[styles.linkText, failedAttempts >= 3 && styles.highlightedLink]}>
+          <Text style={[
+            styles.linkText, 
+            failedAttempts >= 3 ? styles.highlightedLink : null
+          ]}>
             Forgot your Password?
           </Text>
         </TouchableOpacity>

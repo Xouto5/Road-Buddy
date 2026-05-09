@@ -4,6 +4,7 @@ MANUEL:
 // ======================================== */
 
 import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth"; // ADDED THIS
 import { 
   getFirestore, 
   collection, 
@@ -25,11 +26,19 @@ const firebaseConfig = {
 // Initialize Firebase App
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
+// Initialize Auth and EXPORT it
+export const auth = getAuth(app); // ADDED THIS
+
 // Initialize Firestore
 export const db = getFirestore(app);
 
 export const performFirestoreOperations = async (name, lastname, email, carType, phone) => {
   try {
+    // Check if auth exists and has a user before accessing UID
+    if (!auth?.currentUser) {
+      throw new Error("No authenticated user found.");
+    }
+
     await addDoc(collection(db, "users"), {
       firstname: name,
       lastname: lastname,
@@ -45,7 +54,7 @@ export const performFirestoreOperations = async (name, lastname, email, carType,
 };
 
 export async function getUserData(){
-  if (!auth.currentUser) return null;
+  if (!auth?.currentUser) return null; // Added safety check
   const q = query(collection(db, "users"), where("userID", "==", auth.currentUser.uid));
   const querySnapshot = await getDocs(q);
   return querySnapshot.empty ? null : querySnapshot.docs[0].data();
@@ -53,6 +62,8 @@ export async function getUserData(){
 
 export async function updateUserData(updatedData) {
   try {
+    if (!auth?.currentUser) throw new Error("Not authenticated");
+    
     const q = query(collection(db, "users"), where("userID", "==", auth.currentUser.uid));
     const querySnapshot = await getDocs(q);
 
