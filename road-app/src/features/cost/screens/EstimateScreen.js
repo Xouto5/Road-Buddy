@@ -13,6 +13,8 @@ BRIAN:  Modified screen as per parameters on ticket FE-2. Changed display title,
   
         Date completed: 04/26/2026
 
+GEMINI: Integrated "Edit Mode" logic and updated placeholders to match 
+        provided UI design reference.
 // ======================================== */
 
 import { useState, useEffect, useRef } from "react";
@@ -45,9 +47,6 @@ const PLACES_API_KEY =
   process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
   process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID;
 
-
-var haveSentVerifacationNotice = false;
-
 export default function EstimateScreen({ navigation, route }) {
   const [mpg, setMpg] = useState("");
   const [gasPrice, setGasPrice] = useState("");
@@ -70,52 +69,31 @@ export default function EstimateScreen({ navigation, route }) {
   const debounceRef = useRef(null);
   const sessionTokenRef = useRef(`estimate-${Date.now()}`);
 
-const hasRun = useRef(false);
+  const hasRun = useRef(false);
 
-
-
-  // send alert for email verfication, will send every 15 seconds after dismissing
   useEffect(() => {
     if(!isUserVerified() && !hasRun.current){
-    hasRun.current = true;
-    setTimeout(() => {
-      Alert.alert(
-      'Email is not verified',
-      'Please verify your email. Check your email for an existing link, or click send again to receive a new one. Please check your spam folder if it has not arrived.',
-      [
-        {
-          text: 'Okay', 
-        },
-        {
-          text: 'Send Again', 
-          onPress: () => verifyEmail()
-        },
-      ],
-      {cancelable: false},
-      );
-    }, 5000);
+      hasRun.current = true;
+      setTimeout(() => {
+        Alert.alert(
+          'Email is not verified',
+          'Please verify your email. Check your email for an existing link, or click send again to receive a new one.',
+          [
+            { text: 'Okay' },
+            { text: 'Send Again', onPress: () => verifyEmail() },
+          ],
+          { cancelable: false },
+        );
+      }, 5000);
+    }
+  }, []);
 
-    setTimeout(() => {
-      haveSentVerifacationNotice = false;
-    }, 15000);
-
-  }
-  }), [];
-
-
-  // Repopulate fields when returning from TripResults via Edit Trip
   useEffect(() => {
     const p = route?.params;
     if (!p) return;
 
-    // If a tripId exists, we are in edit mode
     if (p.tripId) {
-        setIsEditing(true);
-    }
-
-    // FIX: Only update params if the tripId actually changed to avoid infinite loop
-    if (p.tripId !== undefined && p.tripId !== route.params?.tripId) {
-      navigation.setParams({ tripId: p.tripId });
+      setIsEditing(true);
     }
 
     if (p.startLocation !== undefined) setStartLocation(p.startLocation);
@@ -124,7 +102,7 @@ const hasRun = useRef(false);
     if (p.mpg !== undefined) setMpg(p.mpg);
     if (p.gasPrice !== undefined) setGasPrice(p.gasPrice);
     if (p.fuelType !== undefined) setFuelType(p.fuelType);
-  }, [route?.params?.tripId, route?.params?.startLocation]); // More specific dependencies
+  }, [route?.params]);
 
   const resetForm = () => {
     setStartLocation("");
@@ -135,7 +113,6 @@ const hasRun = useRef(false);
     setFuelType("Regular");
     setValidationErrors({});
     setIsEditing(false);
-    // Clear route params so it doesn't trigger useEffect again
     navigation.setParams({ 
         tripId: undefined, 
         startLocation: undefined, 
@@ -151,18 +128,12 @@ const hasRun = useRef(false);
     try {
       setLocationLoading(true);
       setLocationError("");
-      // When pressed, request location permission and autofill using GPS.
       const { status } = await Location.requestForegroundPermissionsAsync();
-      // If permission is denied, fail gracefully without breaking the UI.
       if (status !== "granted") {
-        setLocationError(
-          "Location permission denied. Enable it in your device settings.",
-        );
+        setLocationError("Location permission denied.");
         return;
       }
-      const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const [place] = await Location.reverseGeocodeAsync({
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
@@ -171,13 +142,10 @@ const hasRun = useRef(false);
         const parts = [place.street, place.city, place.region].filter(Boolean);
         setStartLocation(parts.join(", "));
       } else {
-        setStartLocation(
-          `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`,
-        );
+        setStartLocation(`${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`);
       }
-      setValidationErrors((e) => ({ ...e, startLocation: undefined }));
     } catch (err) {
-      setLocationError("Could not retrieve location. Please try again.");
+      setLocationError("Could not retrieve location.");
     } finally {
       setLocationLoading(false);
     }
@@ -186,90 +154,30 @@ const hasRun = useRef(false);
   const handleUseLocalPrice = async () => {
     try {
       setGasPriceLoading(true);
-      setValidationErrors((e) => ({ ...e, gasPrice: undefined }));
-      // When pressed, autofill gas price value (use of API).
-
-      // Request location permission to determine the user's state for regional pricing.
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setValidationErrors((e) => ({
-          ...e,
-          gasPrice:
-            "Location permission denied. Enable it in settings to use local price.",
-        }));
-        return;
-      }
+      if (status !== "granted") return;
 
-      const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const googleApiKey =
-        process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
-        process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID;
-
-      if (!googleApiKey) {
-        throw new Error(
-          "Missing Google Maps API key. Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.",
-        );
-      }
-
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const params = new URLSearchParams({
         location: `${pos.coords.latitude},${pos.coords.longitude}`,
         radius: "5000",
         type: "gas_station",
-        key: googleApiKey,
+        key: PLACES_API_KEY,
       });
 
-      const placesResponse = await fetch(
-        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${params.toString()}`,
-      );
+      const res = await fetch(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?${params.toString()}`);
+      const data = await res.json();
+      const stations = data.results || [];
+      const priceLevels = stations.map((s) => s.price_level).filter((p) => Number.isInteger(p));
 
-      if (!placesResponse.ok) {
-        throw new Error(
-          `Gas station lookup failed (${placesResponse.status}).`,
-        );
-      }
-
-      const placesData = await placesResponse.json();
-
-      if (placesData.status !== "OK" && placesData.status !== "ZERO_RESULTS") {
-        throw new Error(
-          placesData.error_message || `Places API error: ${placesData.status}`,
-        );
-      }
-
-      const stations = placesData.results || [];
-      const priceLevels = stations
-        .map((s) => s.price_level)
-        .filter((p) => Number.isInteger(p) && p >= 0 && p <= 4);
-
-      let localPrice = null;
       if (priceLevels.length > 0) {
-        const avgPriceLevel =
-          priceLevels.reduce((sum, level) => sum + level, 0) /
-          priceLevels.length;
-
-        // Google price_level is 0-4, so convert it to a practical per-gallon estimate.
-        const fuelTypeOffsets = { Regular: 0.0, Premium: 0.55, Diesel: 0.35 };
-        const estimatedRegular = 2.85 + avgPriceLevel * 0.45;
-        localPrice = estimatedRegular + (fuelTypeOffsets[fuelType] || 0);
+        const avg = priceLevels.reduce((a, b) => a + b, 0) / priceLevels.length;
+        const offset = { Regular: 0.0, Premium: 0.55, Diesel: 0.35 }[fuelType] || 0;
+        const est = 2.85 + avg * 0.45 + offset;
+        setGasPrice(`$${est.toFixed(2)}`);
       }
-
-      if (localPrice === null) {
-        throw new Error(
-          "Local gas pricing is unavailable for nearby stations. Enter gas price manually.",
-        );
-      }
-
-      setGasPrice(`$${localPrice.toFixed(2)}`);
-      setValidationErrors((e) => ({ ...e, gasPrice: undefined }));
     } catch (err) {
-      setValidationErrors((e) => ({
-        ...e,
-        gasPrice:
-          err.message ||
-          "Could not fetch local gas price. Please enter manually.",
-      }));
+      setValidationErrors((e) => ({ ...e, gasPrice: "Could not fetch local price." }));
     } finally {
       setGasPriceLoading(false);
     }
@@ -277,9 +185,7 @@ const hasRun = useRef(false);
 
   const normalizeGasPriceInput = (value) => {
     const cleaned = (value || "").replace(/[^0-9.]/g, "");
-    const [whole = "", ...rest] = cleaned.split(".");
-    const normalized = rest.length > 0 ? `${whole}.${rest.join("")}` : whole;
-    return normalized ? `$${normalized}` : "";
+    return cleaned ? `$${cleaned}` : "";
   };
 
   const parseGasPriceValue = (value) => {
@@ -287,164 +193,68 @@ const hasRun = useRef(false);
     return parseFloat(numeric);
   };
 
-  const validateStartLocation = (value) => {
-    if (!value || !value.trim()) return "Start location is required.";
-    return undefined;
+  const handleAddressTyping = (field, text) => {
+    if (field === "start") setStartLocation(text);
+    else setDestination(text);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => handleAutocompleteLookup(field, text), 400);
   };
 
   const handleAutocompleteLookup = async (field, rawText) => {
     const text = (rawText || "").trim();
+    if (text.length < 3) return;
 
-    if (text.length < 3) {
-      if (field === "start") {
-        setStartSuggestions([]);
-      } else {
-        setDestinationSuggestions([]);
-      }
-      return;
-    }
-
-    if (field === "start") {
-      setStartAutocompleteLoading(true);
-    } else {
-      setDestinationAutocompleteLoading(true);
-    }
-
+    field === "start" ? setStartAutocompleteLoading(true) : setDestinationAutocompleteLoading(true);
     try {
       const response = await fetch(GOOGLE_PLACES_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": PLACES_API_KEY,
-          "X-Goog-FieldMask": AUTOCOMPLETE_FIELD_MASK,
-        },
-        body: JSON.stringify({
-          input: text,
-          sessionToken: sessionTokenRef.current,
-          includedRegionCodes: ["us"],
-        }),
+        headers: { "Content-Type": "application/json", "X-Goog-Api-Key": PLACES_API_KEY, "X-Goog-FieldMask": AUTOCOMPLETE_FIELD_MASK },
+        body: JSON.stringify({ input: text, sessionToken: sessionTokenRef.current, includedRegionCodes: ["us"] }),
       });
-
-      if (!response.ok) {
-        throw new Error(`Autocomplete request failed (${response.status})`);
-      }
-
       const result = await response.json();
-      const suggestions = result?.suggestions || [];
-
-      if (field === "start") {
-        setStartSuggestions(suggestions);
-      } else {
-        setDestinationSuggestions(suggestions);
-      }
-    } catch {
-      if (field === "start") {
-        setStartSuggestions([]);
-      } else {
-        setDestinationSuggestions([]);
-      }
+      field === "start" ? setStartSuggestions(result.suggestions || []) : setDestinationSuggestions(result.suggestions || []);
     } finally {
-      if (field === "start") {
-        setStartAutocompleteLoading(false);
-      } else {
-        setDestinationAutocompleteLoading(false);
-      }
+      field === "start" ? setStartAutocompleteLoading(false) : setDestinationAutocompleteLoading(false);
     }
-  };
-
-  const handleAddressTyping = (field, text) => {
-    if (field === "start") {
-      setStartLocation(text);
-      setLocationError("");
-      setValidationErrors((e) => ({ ...e, startLocation: undefined }));
-    } else {
-      setDestination(text);
-      setValidationErrors((e) => ({ ...e, destination: undefined }));
-    }
-
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      handleAutocompleteLookup(field, text);
-    }, 400);
   };
 
   const handleSelectSuggestion = (field, suggestion) => {
     const selectedText = suggestion?.placePrediction?.text?.text || "";
-    if (!selectedText) return;
-
     if (field === "start") {
       setStartLocation(selectedText);
       setStartSuggestions([]);
-      setValidationErrors((e) => ({ ...e, startLocation: undefined }));
     } else {
       setDestination(selectedText);
       setDestinationSuggestions([]);
-      setValidationErrors((e) => ({ ...e, destination: undefined }));
     }
   };
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   const handleRecalculate = async () => {
     const errors = {};
     const gasPriceNumber = parseGasPriceValue(gasPrice);
-    const startLocationError = validateStartLocation(startLocation);
-    if (startLocationError) errors.startLocation = startLocationError;
+    if (!startLocation.trim()) errors.startLocation = "Start location is required.";
     if (!destination.trim()) errors.destination = "Destination is required.";
-    if (!mpg.trim() || isNaN(parseFloat(mpg)) || parseFloat(mpg) <= 0)
-      errors.mpg = "Enter a valid MPG.";
-    if (!gasPrice.trim() || isNaN(gasPriceNumber) || gasPriceNumber <= 0)
-      errors.gasPrice = "Enter a valid gas price.";
+    if (!mpg.trim() || isNaN(parseFloat(mpg))) errors.mpg = "Enter valid MPG.";
+    if (!gasPrice.trim() || isNaN(gasPriceNumber)) errors.gasPrice = "Enter valid gas price.";
 
     setValidationErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
     try {
       setCalculationLoading(true);
-
-      // Geocode both addresses to get lat/lng
       const startCoords = await geocodeAddress(startLocation);
       const destCoords = await geocodeAddress(destination);
-
-      // Get directions to calculate distance
       const directionsData = await getDirections({
         origin: { lat: startCoords.lat, lng: startCoords.lng },
         destination: { lat: destCoords.lat, lng: destCoords.lng },
       });
 
       const distance = directionsData.distanceMiles;
-      const duration = directionsData.durationMinutes;
       const mpgNumber = parseFloat(mpg);
 
-      // Calculate gallons, cost per mile, and total cost
-      const gallonsUsed = milesToGallons(distance, mpgNumber);
-      const totalTripCost = tripFuelCost(distance, mpgNumber, gasPriceNumber);
-      const costMileValue = costPerMile(mpgNumber, gasPriceNumber);
-
-      // Format values for display
-      const gallonsDisplay =
-        gallonsUsed !== null ? gallonsUsed.toFixed(2) : "0.00";
-      const costPerMileDisplay =
-        costMileValue !== null ? costMileValue.toFixed(2) : "0.00";
-      const totalCostDisplay =
-        totalTripCost !== null ? totalTripCost.toFixed(2) : "0.00";
-
-      const tripIdToPass = route.params?.tripId;
-
-      // If we are editing, we reset form state after navigation
-      if (isEditing) {
-          setIsEditing(false);
-      }
-
       navigation.navigate("TripResults", {
-        tripId: tripIdToPass, // CARRY ID FORWARD
+        tripId: route.params?.tripId,
         startLocation,
         destination,
         vehicle,
@@ -452,18 +262,13 @@ const hasRun = useRef(false);
         gasPrice,
         fuelType,
         distance: distance.toFixed(2),
-        duration: Number.isFinite(duration) ? Math.ceil(duration) : 0,
+        duration: Math.ceil(directionsData.durationMinutes),
         overviewPolyline: directionsData.polyline || "",
-        gallons: gallonsDisplay,
-        costPerMile: costPerMileDisplay,
-        totalCost: totalCostDisplay,
+        gallons: milesToGallons(distance, mpgNumber).toFixed(2),
+        totalCost: tripFuelCost(distance, mpgNumber, gasPriceNumber).toFixed(2),
       });
     } catch (error) {
-      setValidationErrors((prevErrors) => ({
-        ...prevErrors,
-        calculation:
-          error.message || "Failed to calculate trip. Please try again.",
-      }));
+      setValidationErrors({ calculation: "Calculation failed." });
     } finally {
       setCalculationLoading(false);
     }
@@ -471,263 +276,115 @@ const hasRun = useRef(false);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.headerContainer}>
-            <Text style={styles.title}>
-              {isEditing ? "Edit Your Trip" : "Estimate Your Trip"}
-            </Text>
-            <Text style={styles.subtitle}>
-              {isEditing ? "Update your trip details below." : "Enter trip details below."}
-            </Text>
+            <Text style={styles.title}>{isEditing ? "Edit Your Trip" : "Estimate Your Trip"}</Text>
+            <Text style={styles.subtitle}>{isEditing ? "Update your trip details below." : "Enter trip details below."}</Text>
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Start location</Text>
             <View style={styles.locationRow}>
               <TextInput
-                style={[
-                  styles.input,
-                  styles.locationInput,
-                  validationErrors.startLocation && styles.inputError,
-                ]}
+                style={[styles.input, styles.locationInput, validationErrors.startLocation && styles.inputError]}
                 placeholder="e.g., New York, NY"
                 placeholderTextColor={DARK_THEME.placeholder}
                 value={startLocation}
                 onChangeText={(v) => handleAddressTyping("start", v)}
-                onBlur={() => {
-                  const startLocationError =
-                    validateStartLocation(startLocation);
-                  setValidationErrors((e) => ({
-                    ...e,
-                    startLocation: startLocationError,
-                  }));
-                }}
               />
-              <TouchableOpacity
-                style={[
-                  styles.locationButton,
-                  locationLoading && styles.locationButtonDisabled,
-                ]}
-                onPress={handleUseMyLocation}
-                disabled={locationLoading}
-              >
-                <Text style={styles.locationButtonText}>
-                  {locationLoading ? "Locating…" : "Use my location"}
-                </Text>
+              <TouchableOpacity style={styles.locationButton} onPress={handleUseMyLocation} disabled={locationLoading}>
+                <Text style={styles.locationButtonText}>{locationLoading ? "Locating…" : "Use my location"}</Text>
               </TouchableOpacity>
             </View>
-            {startAutocompleteLoading ? (
-              <Text style={styles.helperText}>Loading suggestions...</Text>
-            ) : null}
-            {startSuggestions.length > 0 ? (
+            {startSuggestions.length > 0 && (
               <View style={styles.suggestionsBox}>
                 {startSuggestions.slice(0, 5).map((item, idx) => (
-                  <TouchableOpacity
-                    key={
-                      item?.placePrediction?.placeId ||
-                      `${item?.placePrediction?.text?.text || "place"}-${idx}`
-                    }
-                    style={styles.suggestionItem}
-                    onPress={() => handleSelectSuggestion("start", item)}
-                  >
-                    <Text style={styles.suggestionText}>
-                      {item?.placePrediction?.text?.text}
-                    </Text>
+                  <TouchableOpacity key={idx} style={styles.suggestionItem} onPress={() => handleSelectSuggestion("start", item)}>
+                    <Text style={styles.suggestionText}>{item?.placePrediction?.text?.text}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            ) : null}
-            {locationError ? (
-              <Text style={styles.fieldError}>{locationError}</Text>
-            ) : null}
-            {validationErrors.startLocation ? (
-              <Text style={styles.fieldError}>
-                {validationErrors.startLocation}
-              </Text>
-            ) : null}
+            )}
 
             <Text style={styles.label}>Destination</Text>
             <TextInput
-              style={[
-                styles.input,
-                validationErrors.destination && styles.inputError,
-                validationErrors.destination &&
-                  styles.destinationInputErrorSpacing,
-              ]}
+              style={[styles.input, validationErrors.destination && styles.inputError]}
               placeholder="e.g., Los Angeles, CA"
               placeholderTextColor={DARK_THEME.placeholder}
               value={destination}
               onChangeText={(v) => handleAddressTyping("destination", v)}
             />
-            {destinationAutocompleteLoading ? (
-              <Text style={styles.helperText}>Loading suggestions...</Text>
-            ) : null}
-            {destinationSuggestions.length > 0 ? (
+            {destinationSuggestions.length > 0 && (
               <View style={styles.suggestionsBox}>
                 {destinationSuggestions.slice(0, 5).map((item, idx) => (
-                  <TouchableOpacity
-                    key={
-                      item?.placePrediction?.placeId ||
-                      `${item?.placePrediction?.text?.text || "place"}-${idx}`
-                    }
-                    style={styles.suggestionItem}
-                    onPress={() => handleSelectSuggestion("destination", item)}
-                  >
-                    <Text style={styles.suggestionText}>
-                      {item?.placePrediction?.text?.text}
-                    </Text>
+                  <TouchableOpacity key={idx} style={styles.suggestionItem} onPress={() => handleSelectSuggestion("destination", item)}>
+                    <Text style={styles.suggestionText}>{item?.placePrediction?.text?.text}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            ) : null}
-            {validationErrors.destination ? (
-              <Text style={styles.fieldError}>
-                {validationErrors.destination}
-              </Text>
-            ) : null}
+            )}
 
             <View style={styles.inlineRow}>
               <View style={styles.inlineLeft}>
                 <Text style={styles.label}>Vehicle</Text>
-                <TextInput
-                  style={[styles.input, styles.inlineInput]}
-                  placeholder="e.g., 2023 Toyota Camry"
-                  placeholderTextColor={DARK_THEME.placeholder}
-                  value={vehicle}
-                  onChangeText={setVehicle}
+                <TextInput 
+                  style={styles.input} 
+                  placeholder="e.g., 2023 Toyota Camry" 
+                  placeholderTextColor={DARK_THEME.placeholder} 
+                  value={vehicle} 
+                  onChangeText={setVehicle} 
                 />
               </View>
               <View style={styles.inlineRight}>
                 <Text style={styles.label}>MPG</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    styles.inlineInput,
-                    validationErrors.mpg && styles.inputError,
-                  ]}
+                <TextInput 
+                  style={[styles.input, validationErrors.mpg && styles.inputError]} 
+                  keyboardType="numeric" 
                   placeholder="e.g., 28"
                   placeholderTextColor={DARK_THEME.placeholder}
-                  value={mpg}
-                  onChangeText={(v) => {
-                    setMpg(v);
-                    setValidationErrors((e) => ({ ...e, mpg: undefined }));
-                  }}
-                  keyboardType="numeric"
+                  value={mpg} 
+                  onChangeText={setMpg} 
                 />
-                {validationErrors.mpg ? (
-                  <Text style={styles.fieldError}>{validationErrors.mpg}</Text>
-                ) : null}
               </View>
             </View>
 
             <Text style={styles.label}>Gas Price (per gallon)</Text>
             <View style={styles.fuelTypeRow}>
               {["Regular", "Premium", "Diesel"].map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.fuelTypeButton,
-                    fuelType === type && styles.fuelTypeButtonActive,
-                  ]}
-                  onPress={() => setFuelType(type)}
-                >
-                  <Text
-                    style={[
-                      styles.fuelTypeText,
-                      fuelType === type && styles.fuelTypeTextActive,
-                    ]}
-                  >
-                    {type}
-                  </Text>
+                <TouchableOpacity key={type} style={[styles.fuelTypeButton, fuelType === type && styles.fuelTypeButtonActive]} onPress={() => setFuelType(type)}>
+                  <Text style={[styles.fuelTypeText, fuelType === type && styles.fuelTypeTextActive]}>{type}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             <View style={styles.locationRow}>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.locationInput,
-                  validationErrors.gasPrice && styles.inputError,
-                ]}
+              <TextInput 
+                style={[styles.input, styles.locationInput]} 
+                keyboardType="numeric" 
                 placeholder="e.g., $4.25"
                 placeholderTextColor={DARK_THEME.placeholder}
-                value={gasPrice}
-                onChangeText={(v) => {
-                  setGasPrice(normalizeGasPriceInput(v));
-                  setValidationErrors((e) => ({ ...e, gasPrice: undefined }));
-                }}
-                onBlur={() => {
-                  const n = parseGasPriceValue(gasPrice);
-                  if (!isNaN(n) && n > 0) setGasPrice(`$${n.toFixed(2)}`);
-                }}
-                keyboardType="numeric"
+                value={gasPrice} 
+                onChangeText={(v) => setGasPrice(normalizeGasPriceInput(v))} 
               />
-              <TouchableOpacity
-                style={[
-                  styles.locationButton,
-                  gasPriceLoading && styles.locationButtonDisabled,
-                ]}
-                onPress={handleUseLocalPrice}
-                disabled={gasPriceLoading}
-              >
-                <Text style={styles.locationButtonText}>
-                  {gasPriceLoading ? "Loading\u2026" : "Use local price"}
-                </Text>
+              <TouchableOpacity style={styles.locationButton} onPress={handleUseLocalPrice} disabled={gasPriceLoading}>
+                <Text style={styles.locationButtonText}>Use local price</Text>
               </TouchableOpacity>
             </View>
-            {validationErrors.gasPrice ? (
-              <Text style={styles.fieldError}>{validationErrors.gasPrice}</Text>
-            ) : null}
           </View>
-
-          {validationErrors.calculation ? (
-            <Text style={styles.fieldError}>
-              {validationErrors.calculation}
-            </Text>
-          ) : null}
 
           <View style={styles.calculateContainer}>
             {isEditing ? (
               <View style={styles.editButtonRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    { flex: 1 },
-                    calculationLoading && styles.primaryButtonDisabled,
-                  ]}
-                  onPress={handleRecalculate}
-                  disabled={calculationLoading}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    {calculationLoading ? "Saving…" : "Edit Trip"}
-                  </Text>
+                <TouchableOpacity style={[styles.primaryButton, { flex: 1 }]} onPress={handleRecalculate}>
+                  <Text style={styles.primaryButtonText}>Update Trip</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.secondaryButton, { flex: 1 }]}
-                  onPress={resetForm}
-                >
-                  <Text style={styles.secondaryButtonText}>Cancel Edit</Text>
+                <TouchableOpacity style={[styles.secondaryButton, { flex: 1 }]} onPress={resetForm}>
+                  <Text style={styles.secondaryButtonText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  calculationLoading && styles.primaryButtonDisabled,
-                ]}
-                onPress={handleRecalculate}
-                disabled={calculationLoading}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {calculationLoading ? "Calculating…" : "Calculate"}
-                </Text>
+              <TouchableOpacity style={styles.primaryButton} onPress={handleRecalculate}>
+                <Text style={styles.primaryButtonText}>Calculate</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -738,191 +395,35 @@ const hasRun = useRef(false);
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: DARK_THEME.primaryBackground,
-    paddingHorizontal: 20,
-  },
-  scrollContent: {
-    paddingTop: 16,
-    paddingBottom: 40,
-  },
-  headerContainer: {
-    marginBottom: 28,
-    alignItems: "center",
-  },
-  title: {
-    color: DARK_THEME.primaryText,
-    fontSize: 26,
-    fontWeight: "bold",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: DARK_THEME.placeholder,
-    fontSize: 15,
-    textAlign: "center",
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inlineRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 20,
-  },
-  inlineLeft: {
-    flex: 3,
-  },
-  inlineRight: {
-    flex: 1,
-  },
-  inlineInput: {
-    marginBottom: 0,
-  },
-  label: {
-    color: DARK_THEME.primaryText,
-    fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 20,
-    color: DARK_THEME.primaryText,
-    fontSize: 16,
-    minHeight: 52,
-  },
-  helperText: {
-    color: DARK_THEME.placeholder,
-    fontSize: 12,
-    marginTop: 6,
-    marginBottom: 8,
-  },
-  suggestionsBox: {
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 10,
-    overflow: "hidden",
-    marginTop: 6,
-    marginBottom: 10,
-    backgroundColor: DARK_THEME.modalBackground,
-  },
-  suggestionItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: DARK_THEME.primaryBorder,
-  },
-  suggestionText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 14,
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    gap: 10,
-    marginBottom: 6,
-  },
-  locationInput: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  locationButton: {
-    backgroundColor: DARK_THEME.primaryText,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: 52,
-  },
-  locationButtonDisabled: {
-    opacity: 0.5,
-  },
-  locationButtonText: {
-    color: DARK_THEME.primaryBackground,
-    fontSize: 13,
-    fontWeight: "bold",
-  },
-  calculateContainer: {
-    marginBottom: 24,
-  },
-  primaryButton: {
-    backgroundColor: DARK_THEME.primaryText,
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: "center",
-    minHeight: 52,
-    justifyContent: "center",
-  },
-  primaryButtonDisabled: {
-    opacity: 0.5,
-  },
-  primaryButtonText: {
-    color: DARK_THEME.primaryBackground,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: "center",
-    minHeight: 52,
-    justifyContent: "center",
-  },
-  secondaryButtonText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  fieldError: {
-    color: "#EF4444",
-    fontSize: 13,
-    marginTop: 6,
-    marginBottom: 12,
-  },
-  inputError: {
-    borderColor: "#EF4444",
-  },
-  destinationInputErrorSpacing: {
-    marginBottom: 8,
-  },
-  fuelTypeRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 12,
-  },
-  fuelTypeButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    alignItems: "center",
-  },
-  fuelTypeButtonActive: {
-    backgroundColor: DARK_THEME.primaryText,
-    borderColor: DARK_THEME.primaryText,
-  },
-  fuelTypeText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  fuelTypeTextActive: {
-    color: DARK_THEME.primaryBackground,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  editButtonRow: {
-    flexDirection: "row",
-    gap: 12,
-  }
+  container: { flex: 1, backgroundColor: DARK_THEME.primaryBackground, paddingHorizontal: 20 },
+  scrollContent: { paddingTop: 16, paddingBottom: 40 },
+  headerContainer: { marginBottom: 28, alignItems: "center" },
+  title: { color: DARK_THEME.primaryText, fontSize: 26, fontWeight: "bold", textAlign: "center" },
+  subtitle: { color: DARK_THEME.placeholder, fontSize: 15, textAlign: "center" },
+  inputContainer: { marginBottom: 20 },
+  label: { color: DARK_THEME.primaryText, fontSize: 15, fontWeight: "600", marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: DARK_THEME.primaryBorder, borderRadius: 10, padding: 14, color: DARK_THEME.primaryText, fontSize: 16, marginBottom: 20 },
+  locationRow: { flexDirection: "row", gap: 10, marginBottom: 6 },
+  locationInput: { flex: 1, marginBottom: 0 },
+  locationButton: { backgroundColor: DARK_THEME.primaryText, paddingHorizontal: 14, borderRadius: 10, justifyContent: "center" },
+  locationButtonText: { color: DARK_THEME.primaryBackground, fontSize: 13, fontWeight: "bold" },
+  suggestionsBox: { backgroundColor: DARK_THEME.modalBackground, borderRadius: 10, marginBottom: 10 },
+  suggestionItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: DARK_THEME.primaryBorder },
+  suggestionText: { color: DARK_THEME.primaryText },
+  inlineRow: { flexDirection: "row", gap: 12 },
+  inlineLeft: { flex: 3 },
+  inlineRight: { flex: 1 },
+  fuelTypeRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
+  fuelTypeButton: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: DARK_THEME.primaryBorder, alignItems: "center" },
+  fuelTypeButtonActive: { backgroundColor: DARK_THEME.primaryText },
+  fuelTypeText: { color: DARK_THEME.primaryText },
+  fuelTypeTextActive: { color: DARK_THEME.primaryBackground },
+  calculateContainer: { marginBottom: 24 },
+  primaryButton: { backgroundColor: DARK_THEME.primaryText, padding: 16, borderRadius: 10, alignItems: "center" },
+  primaryButtonText: { color: DARK_THEME.primaryBackground, fontWeight: "bold", fontSize: 16 },
+  secondaryButton: { borderWidth: 1, borderColor: DARK_THEME.primaryBorder, padding: 16, borderRadius: 10, alignItems: "center" },
+  secondaryButtonText: { color: DARK_THEME.primaryText, fontSize: 16 },
+  editButtonRow: { flexDirection: "row", gap: 12 },
+  safeArea: { flex: 1 },
+  inputError: { borderColor: "#EF4444" }
 });

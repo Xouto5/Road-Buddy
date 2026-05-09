@@ -4,7 +4,7 @@ BRIAN:  Created Trips Results sub-screen, added navigation from
         Estimate screen, added Save Trip modal.
   
         Date completed: 04/26/2026
-
+        
 // ======================================== */
 
 import { saveTrip } from "../../trip/services/tripServices";
@@ -36,6 +36,9 @@ export default function TripResults({ route, navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   // Track the current trip ID to prevent duplicates if editing/resaving
   const [currentTripId, setCurrentTripId] = useState(route.params?.tripId || null);
+
+  // Check if we are in Edit Mode based on the existence of a tripId
+  const isEditMode = !!route.params?.tripId;
   
   const {
     startLocation = "",
@@ -100,9 +103,7 @@ export default function TripResults({ route, navigation }) {
     });
   };
 
-  //Saving trip information to firestore -Nathan.
   const handleSaveToDatabase = async () => {
-    //Preparing the data package using the variables Brain created.
     const tripData = {
       startLocation,
       destination,
@@ -110,7 +111,7 @@ export default function TripResults({ route, navigation }) {
       mpg,
       distance,
       duration,
-      gasPrice: gasPriceNumber, // Using the parsed number.
+      gasPrice: gasPriceNumber,
       fuelType,
       totalCost,
       overviewPolyline
@@ -120,47 +121,37 @@ export default function TripResults({ route, navigation }) {
 
     if (result.success) {
       setCurrentTripId(result.id);
-      setModalVisible(true); //Brian's "Saved!" modal only shows if it actually saved.
+      setModalVisible(true);
     }
-    
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerContainer}>
-          {/* Display title: "Trip Results" at the top of the screen. */}
           <Text style={styles.title}>Trip Results</Text>
-          {/* Display subtitle: "Here are your trip details." */}
           <Text style={styles.subtitle}>Here are your trip details.</Text>
         </View>
 
-        {/* Create a results container to organize information. */}
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsHeader}>Results:</Text>
-          {/* Display Distance in miles. */}
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Distance</Text>
             <Text style={styles.rowValue}>{distance || "—"} mi</Text>
           </View>
-          {/* Display Estimated gallons used. */}
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Estimated gallons used</Text>
             <Text style={styles.rowValue}>{gallons} gal</Text>
           </View>
-          {/* Display Gas price used and include selected type (Regular, Premium, Diesel). */}
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Gas price ({fuelType})</Text>
             <Text style={styles.rowValue}>${!isNaN(gasPriceNumber) ? gasPriceNumber.toFixed(2) : "0.00"} / gal</Text>
           </View>
-          {/* Display MPG used for calculation. */}
           <View style={styles.row}>
             <Text style={styles.rowLabel}>MPG</Text>
             <Text style={styles.rowValue}>{mpg || "—"}</Text>
           </View>
           <View style={styles.divider} />
-          {/* Display Total trip cost. */}
-          {/* Total trip cost should be visually emphasized (larger or bold). */}
           <View style={[styles.row, styles.rowLast, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total trip cost</Text>
             <Text style={styles.totalValue}>${totalCost}</Text>
@@ -175,45 +166,39 @@ export default function TripResults({ route, navigation }) {
             <Text style={styles.primaryButtonText}>Show in Overview</Text>
           </TouchableOpacity>
 
-          <View style={styles.buttonRow}>
-            {/* Add "Save Trip" button at bottom of screen. */}
-            {/* When pressed, show modal popup. */}
-            {/* Modal should display bold title: "Saved Trip!" */}
-            {/* Modal should display message: "Go to Trips to see your saved trips." */}
-            {/* Modal should be dismissible by tapping outside or pressing a close button. */}
-            <TouchableOpacity
-              style={[styles.primaryButton, { flex: 1 }]}
-              onPress={handleSaveToDatabase}
-            >
-              <Text style={styles.primaryButtonText}>Save Trip</Text>
-            </TouchableOpacity>
+          {/* Conditional Rendering: Only show Save and Edit if NOT in Edit Mode */}
+          {!isEditMode && (
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.primaryButton, { flex: 1 }]}
+                onPress={handleSaveToDatabase}
+              >
+                <Text style={styles.primaryButtonText}>Save Trip</Text>
+              </TouchableOpacity>
 
-            {/* Add "Edit Trip" button next to Save Trip. */}
-            {/* When pressed, navigate back to Estimate screen with all inputs preserved. */}
-            <TouchableOpacity
-              style={[styles.primaryButton, { flex: 1 }]}
-              onPress={() =>
-                navigation.navigate("Home", {
-                  screen: "Estimate",
-                  params: { 
-                    tripId: currentTripId, // PASS ID BACK TO ESTIMATE
-                    startLocation, 
-                    destination, 
-                    vehicle, 
-                    mpg, 
-                    gasPrice, 
-                    fuelType, 
-                    distance 
-                  },
-                })
-              }
-            >
-              <Text style={styles.primaryButtonText}>Edit Trip</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[styles.primaryButton, { flex: 1 }]}
+                onPress={() =>
+                  navigation.navigate("Home", {
+                    screen: "Estimate",
+                    params: { 
+                      tripId: currentTripId,
+                      startLocation, 
+                      destination, 
+                      vehicle, 
+                      mpg, 
+                      gasPrice, 
+                      fuelType, 
+                      distance 
+                    },
+                  })
+                }
+              >
+                <Text style={styles.primaryButtonText}>Edit Trip</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-          {/* Add "Done" button below. */}
-          {/* When pressed, exit the Results screen to main flow. */}
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => navigation.navigate("Home", { screen: "Plan" })}
@@ -286,12 +271,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "bold",
   },
-  cardTitle: {
-    color: DARK_THEME.primaryText,
-    fontSize: 17,
-    fontWeight: "bold",
-    marginBottom: 14,
-  },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -352,20 +331,6 @@ const styles = StyleSheet.create({
     color: DARK_THEME.primaryBackground,
     fontSize: 16,
     fontWeight: "bold",
-  },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: "center",
-    minHeight: 52,
-    justifyContent: "center",
-  },
-  secondaryButtonText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 16,
-    fontWeight: "600",
   },
   modalOverlay: {
     flex: 1,
