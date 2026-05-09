@@ -7,7 +7,8 @@ BRIAN:  Created Trips Results sub-screen, added navigation from
 
 // ======================================== */
 
-import React, { useState } from "react";
+import { saveTrip } from "../../trip/services/tripServices";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -33,7 +34,7 @@ const withAlpha = (hexColor, alpha) => {
 
 export default function TripResults({ route, navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
-
+  const [currentTripId, setCurrentTripId] = useState(route.params?.tripId || null);
   const {
     startLocation = "",
     destination = "",
@@ -97,6 +98,31 @@ export default function TripResults({ route, navigation }) {
     });
   };
 
+  //Saving trip information to firestore -Nathan.
+  const handleSaveToDatabase = async () => {
+    //Preparing the data package using the variables Brain created.
+    const tripData = {
+      startLocation,
+      destination,
+      vehicle,
+      mpg,
+      distance,
+      duration,
+      gasPrice: gasPriceNumber, // Using the parsed number.
+      fuelType,
+      totalCost,
+      overviewPolyline
+    };
+
+    const result = await saveTrip(tripData, currentTripId);
+
+    if (result.success) {
+      setCurrentTripId(result.id);
+      setModalVisible(true); //Brian's "Saved!" modal only shows if it actually saved.
+    }
+    
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -155,7 +181,7 @@ export default function TripResults({ route, navigation }) {
             {/* Modal should be dismissible by tapping outside or pressing a close button. */}
             <TouchableOpacity
               style={[styles.primaryButton, { flex: 1 }]}
-              onPress={() => setModalVisible(true)}
+              onPress={handleSaveToDatabase}
             >
               <Text style={styles.primaryButtonText}>Save Trip</Text>
             </TouchableOpacity>
@@ -167,7 +193,7 @@ export default function TripResults({ route, navigation }) {
               onPress={() =>
                 navigation.navigate("Home", {
                   screen: "Estimate",
-                  params: { startLocation, destination, vehicle, mpg, gasPrice, fuelType, distance },
+                  params: { tripId: currentTripId, startLocation, destination, vehicle, mpg, gasPrice, fuelType, distance },
                 })
               }
             >
