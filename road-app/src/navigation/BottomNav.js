@@ -7,6 +7,7 @@ Date: 03-26-2026
 */
 
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Platform } from "react-native";
 
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import SimpleLineIcons from "@expo/vector-icons/SimpleLineIcons";
@@ -20,19 +21,32 @@ import ProfileScreen from "../features/settings/screens/SettingsScreen";
 
 const Tab = createBottomTabNavigator();
 
+const THEME_COLOR = "#1B2435";
+
 export default function BottomNav() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarInactiveBackgroundColor: "rgba(84,84,84,0.8)",
+        headerShown: false,
+        tabBarActiveTintColor: "#2196F3",
         tabBarInactiveTintColor: "#fafafa",
+        tabBarStyle: {
+          backgroundColor: THEME_COLOR,
+          borderTopWidth: 0,        
+          elevation: 0,             
+          shadowOpacity: 0,         
+          height: Platform.OS === 'ios' ? 88 : 64,
+          paddingBottom: Platform.OS === 'ios' ? 30 : 10,
+        },
+        tabBarItemStyle: {
+          backgroundColor: THEME_COLOR,
+        },
       }}
     >
       <Tab.Screen
         name="Plan"
-        component={HomeScreen} // <-- Plan Screen
+        component={HomeScreen}
         options={{
-          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <SimpleLineIcons name="paper-plane" size={size} color={color} />
           ),
@@ -40,9 +54,8 @@ export default function BottomNav() {
       />
       <Tab.Screen
         name="Overview"
-        component={TripDetailsScreen} // <-- Overview Screen
+        component={TripDetailsScreen}
         options={{
-          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <FontAwesome name="bar-chart-o" size={size} color={color} />
           ),
@@ -51,9 +64,8 @@ export default function BottomNav() {
 
       <Tab.Screen
         name="Trips"
-        component={TripsSummaryScreen} // <-- Trip History Screen
+        component={TripsSummaryScreen}
         options={{
-          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <FontAwesome name="calendar" size={size} color={color} />
           ),
@@ -62,9 +74,8 @@ export default function BottomNav() {
 
       <Tab.Screen
         name="Estimate"
-        component={EstimateScreen} // <-- Estimate Screen
+        component={EstimateScreen}
         options={{
-          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <FontAwesome6 name="calculator" size={size} color={color} />
           ),
@@ -73,9 +84,8 @@ export default function BottomNav() {
 
       <Tab.Screen
         name="Settings"
-        component={ProfileScreen} // <-- Profile Settings Screen
+        component={ProfileScreen}
         options={{
-          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <FontAwesome6 name="user" size={size} color={color} />
           ),
