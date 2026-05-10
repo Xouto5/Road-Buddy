@@ -1,7 +1,9 @@
-//Josh - I have created a first draft of the User Settings screen which includes:
-//Text boxes that show your first name, last name, phone number, and email
-//There is a pencil icon that you can click on to edit your account details, these changes aren't saved until you press save
-//If there are unsaved changes on attempted logout, there is a popup warning to save or discard changes, or cancel
+/* ======================================== //
+CREDITS:
+Josh: Initial draft of User Settings. Text boxes for user info, 
+      pencil icon for editing, unsaved changes warnings.
+
+// ======================================== */
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -11,13 +13,13 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { logOut, isUserVerified, verifyEmail } from "../../auth/services/authServices";
 import { getUserData, updateUserData } from "../../../core/firebase/firebaseConfig";
@@ -162,12 +164,12 @@ export default function ProfileScreen() {
           </Text>
         )}
         {!isEditingThis && (
-          <Pressable onPress={() => startEditing(key)} disabled={lockThisRow} style={styles.pencilBtn}>
+          <TouchableOpacity onPress={() => startEditing(key)} disabled={lockThisRow} style={styles.pencilBtn}>
             <Image
               source={require("../../../../assets/images/pencil-edit-icon.png")}
               style={[styles.pencilImage, { tintColor: DARK_THEME.primaryText }]}
             />
-          </Pressable>
+          </TouchableOpacity>
         )}
       </View>
     );
@@ -190,16 +192,27 @@ export default function ProfileScreen() {
                 {renderPencilRow("phone", "Phone Number", phoneDraft, setPhoneDraft, "phone-pad")}
                 {renderPencilRow("email", "Email", emailDraft, setEmailDraft, "email-address")}
 
-                <Pressable style={styles.saveBtn} onPress={onSaveChanges} disabled={loading}>
-                  {loading ? <ActivityIndicator color={DARK_THEME.primaryBackground} /> : <Text style={styles.saveBtnText}>Save Changes</Text>}
-                </Pressable>
-                {hasUnsavedChanges && !loading && <Text style={styles.unsavedText}>You have unsaved changes</Text>}
+                <TouchableOpacity 
+                    style={styles.primaryButton} 
+                    onPress={onSaveChanges} 
+                    disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={DARK_THEME.primaryBackground} />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>Save Changes</Text>
+                  )}
+                </TouchableOpacity>
+                
+                {hasUnsavedChanges && !loading && (
+                    <Text style={styles.unsavedText}>You have unsaved changes</Text>
+                )}
               </View>
 
               <View style={styles.footerGroup}>
-                <Pressable style={styles.logoutBtn} onPress={onLogout}>
-                  <Text style={styles.logoutBtnText}>Logout</Text>
-                </Pressable>
+                <TouchableOpacity style={styles.secondaryButton} onPress={onLogout}>
+                  <Text style={styles.secondaryButtonText}>Logout</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </ScrollView>
@@ -234,10 +247,31 @@ const styles = StyleSheet.create({
   fieldInput: { flex: 1, color: DARK_THEME.primaryText, fontSize: 15 },
   pencilBtn: { paddingLeft: 8 },
   pencilImage: { width: 20, height: 20 },
-  saveBtn: { height: 52, borderRadius: 12, backgroundColor: DARK_THEME.primaryText, alignItems: "center", justifyContent: "center", marginTop: 10 },
-  saveBtnText: { color: DARK_THEME.primaryBackground, fontSize: 16, fontWeight: "700" },
   unsavedText: { color: DARK_THEME.placeholder, textAlign: "center", fontSize: 12.5, marginTop: 4 },
   footerGroup: { marginTop: 60 },
-  logoutBtn: { height: 48, borderRadius: 12, borderWidth: 1, borderColor: DARK_THEME.primaryBorder, alignItems: "center", justifyContent: "center" },
-  logoutBtnText: { color: DARK_THEME.primaryText, fontSize: 15, fontWeight: "600" },
+  primaryButton: { 
+    backgroundColor: DARK_THEME.primaryText, 
+    padding: 16, 
+    borderRadius: 10, 
+    alignItems: "center", 
+    marginTop: 10 
+  },
+  primaryButtonText: { 
+    color: DARK_THEME.primaryBackground, 
+    fontWeight: "bold", 
+    fontSize: 16 
+  },
+  secondaryButton: { 
+    height: 48, 
+    borderRadius: 12, 
+    borderWidth: 1, 
+    borderColor: DARK_THEME.primaryBorder, 
+    alignItems: "center", 
+    justifyContent: "center" 
+  },
+  secondaryButtonText: { 
+    color: DARK_THEME.primaryText, 
+    fontSize: 15, 
+    fontWeight: "600" 
+  },
 });

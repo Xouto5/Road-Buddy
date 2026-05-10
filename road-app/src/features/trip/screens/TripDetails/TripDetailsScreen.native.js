@@ -10,11 +10,11 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   ScrollView,
   Platform,
   Linking,
   Alert,
+  TouchableOpacity,
 } from "react-native";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -45,36 +45,21 @@ export default function TripDetailsScreen({ route }) {
   });
 
   const snapPoints = useMemo(() => ["4%", "45%"], []);
-
   const hasTripSelected = polylines.length > 0 && estimate !== null;
 
-  const handleSheetChanges = useCallback((index) => {
-    console.log("Bottom sheet index:", index);
-  }, []);
-
   const openInMaps = async () => {
-    if (!polylines || polylines.length === 0) {
-      Alert.alert("Route unavailable", "No route is available to open in Maps.");
-      return;
-    }
+    if (!polylines || polylines.length === 0) return;
 
     const origin = polylines[0];
     const destination = polylines[polylines.length - 1];
 
-    let url;
-    if (Platform.OS === "ios") {
-      url = `http://maps.apple.com/?saddr=${origin.latitude},${origin.longitude}&daddr=${destination.latitude},${destination.longitude}&dirflg=d`;
-    } else {
-      url = `google.navigation:q=${destination.latitude},${destination.longitude}&mode=d`;
-    }
+    let url = Platform.OS === "ios" 
+      ? `http://maps.apple.com/?saddr=${origin.latitude},${origin.longitude}&daddr=${destination.latitude},${destination.longitude}&dirflg=d`
+      : `google.navigation:q=${destination.latitude},${destination.longitude}&mode=d`;
 
     try {
       const supported = await Linking.canOpenURL(url);
-      if (!supported) {
-        Alert.alert("Maps unavailable", "Could not open this route in Maps.");
-        return;
-      }
-      await Linking.openURL(url);
+      if (supported) await Linking.openURL(url);
     } catch (error) {
       Alert.alert("Maps Error", "Could not open Maps.");
     }
@@ -182,22 +167,10 @@ export default function TripDetailsScreen({ route }) {
             </View>
           )}
 
-          {hasTripSelected && (
-            <View style={styles.utilButtonsContainer}>
-              <View style={styles.iconContainer}>
-                <Feather name="star" size={30} color={DARK_THEME.primaryBackground} />
-              </View>
-              <View style={styles.iconContainer}>
-                <AntDesign name="car" size={30} color={DARK_THEME.primaryBackground} />
-              </View>
-            </View>
-          )}
-
           <BottomSheet
             ref={bottomSheetRef}
             snapPoints={snapPoints}
             index={1}
-            onChange={handleSheetChanges}
             backgroundStyle={styles.bottomSheet}
             handleIndicatorStyle={styles.bottomSheetHandle}
             enablePanDownToClose={false}
@@ -205,50 +178,40 @@ export default function TripDetailsScreen({ route }) {
             <BottomSheetView style={styles.bottomSheetContent}>
               {hasTripSelected ? (
                 <>
-                  <Pressable style={styles.btnContainer} onPress={openInMaps}>
-                    <View style={styles.bottomSheetBtn}>
-                      <Text style={styles.calcBtn}>Open in Maps</Text>
-                    </View>
-                  </Pressable>
+                  <TouchableOpacity style={styles.primaryButton} onPress={openInMaps}>
+                    <Text style={styles.primaryButtonText}>Open in Maps</Text>
+                  </TouchableOpacity>
                   
                   {!tripId && (
-                    <Pressable style={styles.btnContainer} onPress={() => console.log("save pressed")}>
-                      <View style={styles.bottomSheetBtn}>
-                        <Text style={styles.calcBtn}>Save Trip</Text>
-                      </View>
-                    </Pressable>
+                    <TouchableOpacity style={styles.primaryButton} onPress={() => console.log("save pressed")}>
+                      <Text style={styles.primaryButtonText}>Save Trip</Text>
+                    </TouchableOpacity>
                   )}
 
-                  <Pressable
-                    style={styles.btnContainer}
+                  <TouchableOpacity
+                    style={styles.primaryButton}
                     onPress={() => navigation.navigate("Home", { screen: "Plan" })}
                   >
-                    <View style={styles.bottomSheetBtn}>
-                      <Text style={styles.calcBtn}>Add Stop</Text>
-                    </View>
-                  </Pressable>
+                    <Text style={styles.primaryButtonText}>Add Stop</Text>
+                  </TouchableOpacity>
 
-                  <Pressable
-                    style={styles.btnContainer}
+                  <TouchableOpacity
+                    style={styles.primaryButton}
                     onPress={() => {
                       setPolylines([]);
                       setEstimate(null);
                     }}
                   >
-                    <View style={styles.bottomSheetBtn}>
-                      <Text style={styles.calcBtn}>Close Trip</Text>
-                    </View>
-                  </Pressable>
+                    <Text style={styles.primaryButtonText}>Close Trip</Text>
+                  </TouchableOpacity>
                 </>
               ) : (
-                <Pressable
-                  style={styles.btnContainer}
+                <TouchableOpacity
+                  style={styles.primaryButton}
                   onPress={() => navigation.navigate("Home", { screen: "Trips" })}
                 >
-                  <View style={styles.bottomSheetBtn}>
-                    <Text style={styles.calcBtn}>Select a Trip</Text>
-                  </View>
-                </Pressable>
+                  <Text style={styles.primaryButtonText}>Select a Trip</Text>
+                </TouchableOpacity>
               )}
             </BottomSheetView>
           </BottomSheet>
@@ -266,7 +229,6 @@ const styles = StyleSheet.create({
   tripDetail: {
     position: "absolute",
     zIndex: 100,
-    elevation: 100,
     backgroundColor: DARK_THEME.primaryBackground,
     borderBottomWidth: 1,
     borderBottomColor: DARK_THEME.primaryBorder,
@@ -274,7 +236,6 @@ const styles = StyleSheet.create({
     top: 0,
     padding: 15,
   },
-  info: { flex: 1, gap: 6 },
   metricsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -287,24 +248,6 @@ const styles = StyleSheet.create({
   label: { color: DARK_THEME.primaryText, fontWeight: "800", fontSize: 13, width: 45 },
   text: { color: DARK_THEME.primaryText, fontWeight: "500", fontSize: 13 },
   scroll: { flex: 1 },
-  utilButtonsContainer: {
-    position: "absolute",
-    bottom: "52%",
-    right: 15,
-    gap: 15,
-    zIndex: 50,
-    elevation: 50,
-  },
-  iconContainer: {
-    padding: 12,
-    borderRadius: 50,
-    backgroundColor: DARK_THEME.primaryText,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
   bottomSheet: {
     backgroundColor: DARK_THEME.primaryBackground,
     borderTopWidth: 1,
@@ -319,13 +262,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  bottomSheetBtn: {
-    height: 52,
-    backgroundColor: DARK_THEME.primaryText,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 12,
+  primaryButton: { 
+    backgroundColor: DARK_THEME.primaryText, 
+    padding: 16, 
+    borderRadius: 10, 
+    alignItems: "center", 
+    width: "100%" 
   },
-  btnContainer: { width: "100%" },
-  calcBtn: { color: DARK_THEME.primaryBackground, fontSize: 16, fontWeight: "bold" },
+  primaryButtonText: { 
+    color: DARK_THEME.primaryBackground, 
+    fontWeight: "bold", 
+    fontSize: 16 
+  },
 });
