@@ -1,11 +1,3 @@
-/* ======================================== //
-CREDITS:
-BRIAN:  Created Trips Results sub-screen, added navigation from 
-        Estimate screen, added Save Trip modal.
-  
-        Date completed: 04/26/2026
-// ======================================== */
-
 import { saveTrip } from "../../trip/services/tripServices";
 import { useState } from "react";
 import {
@@ -50,8 +42,9 @@ export default function TripResults({ route, navigation }) {
     gallons = "0.00",
     costPerMile = "0.00",
     totalCost = "0.00",
-    titleOverride = "Trip Results",
   } = route.params ?? {};
+
+  const titleText = route.params?.titleOverride || (isEditMode ? "Trip Updated!" : "Trip Results");
 
   const gasPriceNumber = parseFloat(String(gasPrice || "").replace(/[^0-9.]/g, ""));
 
@@ -68,6 +61,8 @@ export default function TripResults({ route, navigation }) {
     navigation.navigate("Home", {
       screen: "Overview",
       params: {
+        tripId: currentTripId,
+        isFromEditMode: isEditMode,
         estDetail: {
           distance: Number.isFinite(distanceNumber) ? Math.ceil(distanceNumber) : 0,
           duration: Number.isFinite(durationNumber) ? Math.ceil(durationNumber) : 0,
@@ -117,7 +112,7 @@ export default function TripResults({ route, navigation }) {
     <SafeAreaView style={styles.safeArea} edges={["left", "right", "top", "bottom"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerContainer}>
-          <Text style={styles.title}>{titleOverride}</Text>
+          <Text style={styles.title}>{titleText}</Text>
           <Text style={styles.subtitle}>Here are your trip details.</Text>
         </View>
 
@@ -142,7 +137,6 @@ export default function TripResults({ route, navigation }) {
             <Text style={styles.rowValue}>{mpg || "—"}</Text>
           </View>
 
-          {/* FIXED: Replaced div with View */}
           <View style={styles.divider} />
 
           <View style={[styles.row, styles.rowLast, styles.totalRow]}>
@@ -213,141 +207,29 @@ export default function TripResults({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: DARK_THEME.primaryBackground,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 40,
-  },
-  headerContainer: {
-    marginBottom: 28,
-    alignItems: "center",
-  },
-  title: {
-    color: DARK_THEME.primaryText,
-    fontSize: 26,
-    fontWeight: "bold",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: DARK_THEME.placeholder,
-    fontSize: 15,
-    textAlign: "center",
-  },
-  resultsContainer: {
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 16,
-    overflow: "hidden",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginBottom: 24,
-    backgroundColor: DARK_THEME.primaryBackground,
-  },
-  resultsHeader: {
-    color: DARK_THEME.primaryText,
-    fontSize: 17,
-    fontWeight: "bold",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: withAlpha(DARK_THEME.primaryText, 0.1),
-  },
-  rowLast: {
-    borderBottomWidth: 0,
-  },
-  rowLabel: {
-    color: DARK_THEME.primaryText,
-    fontSize: 14,
-    flexShrink: 1,
-    marginRight: 12,
-  },
-  rowValue: {
-    color: DARK_THEME.primaryText,
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "right",
-    flexShrink: 1,
-  },
-  totalRow: {
-    marginTop: 6,
-  },
-  divider: {
-    borderBottomWidth: 3,
-    borderBottomColor: DARK_THEME.primaryText,
-    marginVertical: 8,
-  },
-  totalLabel: {
-    color: DARK_THEME.primaryText,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  totalValue: {
-    color: DARK_THEME.primaryText,
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  actions: {
-    gap: 12,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  primaryButton: {
-    backgroundColor: DARK_THEME.primaryText,
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: "center",
-    minHeight: 52,
-    justifyContent: "center",
-  },
-  primaryButtonText: {
-    color: DARK_THEME.primaryBackground,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: withAlpha(DARK_THEME.primaryBackground, 0.75),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalBox: {
-    backgroundColor: DARK_THEME.modalBackground,
-    borderRadius: 14,
-    padding: 28,
-    width: "80%",
-    alignItems: "center",
-    gap: 12,
-  },
-  modalTitle: {
-    color: DARK_THEME.primaryText,
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  modalMessage: {
-    color: DARK_THEME.placeholder,
-    fontSize: 15,
-    textAlign: "center",
-  },
-  modalCloseButton: {
-    marginTop: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    backgroundColor: DARK_THEME.primaryText,
-  },
-  modalCloseText: {
-    color: DARK_THEME.primaryBackground,
-    fontWeight: "bold",
-    fontSize: 15,
-  },
+  safeArea: { flex: 1, backgroundColor: DARK_THEME.primaryBackground },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
+  headerContainer: { marginBottom: 28, alignItems: "center" },
+  title: { color: DARK_THEME.primaryText, fontSize: 26, fontWeight: "bold", marginBottom: 6, textAlign: "center" },
+  subtitle: { color: DARK_THEME.placeholder, fontSize: 15, textAlign: "center" },
+  resultsContainer: { borderWidth: 1, borderColor: DARK_THEME.primaryBorder, borderRadius: 16, overflow: "hidden", paddingHorizontal: 20, paddingVertical: 16, marginBottom: 24, backgroundColor: DARK_THEME.primaryBackground },
+  resultsHeader: { color: DARK_THEME.primaryText, fontSize: 17, fontWeight: "bold" },
+  row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: withAlpha(DARK_THEME.primaryText, 0.1) },
+  rowLast: { borderBottomWidth: 0 },
+  rowLabel: { color: DARK_THEME.primaryText, fontSize: 14, flexShrink: 1, marginRight: 12 },
+  rowValue: { color: DARK_THEME.primaryText, fontSize: 14, fontWeight: "600", textAlign: "right", flexShrink: 1 },
+  totalRow: { marginTop: 6 },
+  divider: { borderBottomWidth: 3, borderBottomColor: DARK_THEME.primaryText, marginVertical: 8 },
+  totalLabel: { color: DARK_THEME.primaryText, fontSize: 16, fontWeight: "bold" },
+  totalValue: { color: DARK_THEME.primaryText, fontSize: 18, fontWeight: "bold" },
+  actions: { gap: 12 },
+  buttonRow: { flexDirection: "row", gap: 12 },
+  primaryButton: { backgroundColor: DARK_THEME.primaryText, paddingVertical: 16, borderRadius: 10, alignItems: "center", minHeight: 52, justifyContent: "center" },
+  primaryButtonText: { color: DARK_THEME.primaryBackground, fontSize: 16, fontWeight: "bold" },
+  modalOverlay: { flex: 1, backgroundColor: withAlpha(DARK_THEME.primaryBackground, 0.75), justifyContent: "center", alignItems: "center" },
+  modalBox: { backgroundColor: DARK_THEME.modalBackground, borderRadius: 14, padding: 28, width: "80%", alignItems: "center", gap: 12 },
+  modalTitle: { color: DARK_THEME.primaryText, fontSize: 20, fontWeight: "bold" },
+  modalMessage: { color: DARK_THEME.placeholder, fontSize: 15, textAlign: "center" },
+  modalCloseButton: { marginTop: 8, paddingVertical: 10, paddingHorizontal: 32, borderRadius: 8, backgroundColor: DARK_THEME.primaryText },
+  modalCloseText: { color: DARK_THEME.primaryBackground, fontWeight: "bold", fontSize: 15 },
 });

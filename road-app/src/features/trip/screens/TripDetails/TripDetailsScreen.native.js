@@ -1,11 +1,3 @@
-/*
-Trip Detail Screen
-Provides map view from point A to point B, including trip details
-
-Author: Bryan Cardeno
-Date: 03-12-2026
-*/
-
 import {
   View,
   Text,
@@ -16,13 +8,11 @@ import {
   Alert,
   TouchableOpacity,
 } from "react-native";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Polyline } from "react-native-maps";
-import { AntDesign } from "@expo/vector-icons";
-import Feather from "@expo/vector-icons/Feather";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { decode } from "@googlemaps/polyline-codec";
 import { calcGasCost } from "../../../../shared/utility/utils";
@@ -32,7 +22,7 @@ export default function TripDetailsScreen({ route }) {
   const navigation = useNavigation();
   const bottomSheetRef = useRef(null);
 
-  const { tripId = null } = route.params ?? {};
+  const { tripId = null, isFromEditMode = false } = route.params ?? {};
 
   const [polylines, setPolylines] = useState([]);
   const [estimate, setEstimate] = useState(null);
@@ -182,7 +172,7 @@ export default function TripDetailsScreen({ route }) {
                     <Text style={styles.primaryButtonText}>Open in Maps</Text>
                   </TouchableOpacity>
                   
-                  {!tripId && (
+                  {!tripId && !isFromEditMode && (
                     <TouchableOpacity style={styles.primaryButton} onPress={() => console.log("save pressed")}>
                       <Text style={styles.primaryButtonText}>Save Trip</Text>
                     </TouchableOpacity>
@@ -226,52 +216,15 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: DARK_THEME.primaryBackground },
   container: { flex: 1, position: "relative", backgroundColor: DARK_THEME.primaryBackground },
   map: { ...StyleSheet.absoluteFillObject },
-  tripDetail: {
-    position: "absolute",
-    zIndex: 100,
-    backgroundColor: DARK_THEME.primaryBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: DARK_THEME.primaryBorder,
-    width: "100%",
-    top: 0,
-    padding: 15,
-  },
-  metricsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-    paddingBottom: 8,
-    marginBottom: 4,
-  },
+  tripDetail: { position: "absolute", zIndex: 100, backgroundColor: DARK_THEME.primaryBackground, borderBottomWidth: 1, borderBottomColor: DARK_THEME.primaryBorder, width: "100%", top: 0, padding: 15 },
+  metricsRow: { flexDirection: "row", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "rgba(255, 255, 255, 0.1)", paddingBottom: 8, marginBottom: 4 },
   addressRow: { flexDirection: "row", alignItems: "center" },
   label: { color: DARK_THEME.primaryText, fontWeight: "800", fontSize: 13, width: 45 },
   text: { color: DARK_THEME.primaryText, fontWeight: "500", fontSize: 13 },
   scroll: { flex: 1 },
-  bottomSheet: {
-    backgroundColor: DARK_THEME.primaryBackground,
-    borderTopWidth: 1,
-    borderTopColor: DARK_THEME.primaryBorder,
-  },
+  bottomSheet: { backgroundColor: DARK_THEME.primaryBackground, borderTopWidth: 1, borderTopColor: DARK_THEME.primaryBorder },
   bottomSheetHandle: { backgroundColor: DARK_THEME.primaryText, width: 40 },
-  bottomSheetContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  primaryButton: { 
-    backgroundColor: DARK_THEME.primaryText, 
-    padding: 16, 
-    borderRadius: 10, 
-    alignItems: "center", 
-    width: "100%" 
-  },
-  primaryButtonText: { 
-    color: DARK_THEME.primaryBackground, 
-    fontWeight: "bold", 
-    fontSize: 16 
-  },
+  bottomSheetContent: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 10 },
+  primaryButton: { backgroundColor: DARK_THEME.primaryText, padding: 16, borderRadius: 10, alignItems: "center", width: "100%" },
+  primaryButtonText: { color: DARK_THEME.primaryBackground, fontWeight: "bold", fontSize: 16 },
 });
