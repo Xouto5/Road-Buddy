@@ -4,7 +4,6 @@ BRIAN:  Created Trips Results sub-screen, added navigation from
         Estimate screen, added Save Trip modal.
   
         Date completed: 04/26/2026
-        
 // ======================================== */
 
 import { saveTrip } from "../../trip/services/tripServices";
@@ -34,10 +33,8 @@ const withAlpha = (hexColor, alpha) => {
 
 export default function TripResults({ route, navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
-  // Track the current trip ID 
   const [currentTripId, setCurrentTripId] = useState(route.params?.tripId || null);
 
-  // Check if we are in Edit Mode
   const isEditMode = !!route.params?.tripId;
   
   const {
@@ -64,10 +61,7 @@ export default function TripResults({ route, navigation }) {
     const durationNumber = parseFloat(String(duration || "").replace(/[^0-9.]/g, ""));
 
     if (!overviewPolyline) {
-      Alert.alert(
-        "Overview unavailable",
-        "Route details are missing. Recalculate the trip and try again.",
-      );
+      Alert.alert("Overview unavailable", "Route details are missing.");
       return;
     }
 
@@ -78,24 +72,10 @@ export default function TripResults({ route, navigation }) {
           distance: Number.isFinite(distanceNumber) ? Math.ceil(distanceNumber) : 0,
           duration: Number.isFinite(durationNumber) ? Math.ceil(durationNumber) : 0,
           gasPrice: Number.isFinite(gasPriceNumber) ? gasPriceNumber : 0,
-          polylines: {
-            encodedPolyline: overviewPolyline,
-          },
+          polylines: { encodedPolyline: overviewPolyline },
         },
-        pointA: {
-          placePrediction: {
-            text: {
-              text: startLocation || "Unknown start",
-            },
-          },
-        },
-        pointB: {
-          placePrediction: {
-            text: {
-              text: destination || "Unknown destination",
-            },
-          },
-        },
+        pointA: { placePrediction: { text: { text: startLocation } } },
+        pointB: { placePrediction: { text: { text: destination } } },
         car: {
           mpg_combined: Number.isFinite(mpgNumber) && mpgNumber > 0 ? mpgNumber : 25,
           label: vehicle || "Vehicle",
@@ -126,8 +106,15 @@ export default function TripResults({ route, navigation }) {
     }
   };
 
+  const navigateToHistory = () => {
+    setModalVisible(false);
+    navigation.navigate("Home", {
+      screen: "Trips",
+    });
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top", "bottom"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerContainer}>
           <Text style={styles.title}>{titleOverride}</Text>
@@ -146,13 +133,18 @@ export default function TripResults({ route, navigation }) {
           </View>
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Gas price ({fuelType})</Text>
-            <Text style={styles.rowValue}>${!isNaN(gasPriceNumber) ? gasPriceNumber.toFixed(2) : "0.00"} / gal</Text>
+            <Text style={styles.rowValue}>
+                ${!isNaN(gasPriceNumber) ? gasPriceNumber.toFixed(2) : "0.00"} / gal
+            </Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.rowLabel}>MPG</Text>
             <Text style={styles.rowValue}>{mpg || "—"}</Text>
           </View>
+
+          {/* FIXED: Replaced div with View */}
           <View style={styles.divider} />
+
           <View style={[styles.row, styles.rowLast, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total trip cost</Text>
             <Text style={styles.totalValue}>${totalCost}</Text>
@@ -160,19 +152,13 @@ export default function TripResults({ route, navigation }) {
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={handleShowInOverview}
-          >
+          <TouchableOpacity style={styles.primaryButton} onPress={handleShowInOverview}>
             <Text style={styles.primaryButtonText}>Show in Overview</Text>
           </TouchableOpacity>
 
           {!isEditMode && (
             <View style={styles.buttonRow}>
-              <TouchableOpacity
-                style={[styles.primaryButton, { flex: 1 }]}
-                onPress={handleSaveToDatabase}
-              >
+              <TouchableOpacity style={[styles.primaryButton, { flex: 1 }]} onPress={handleSaveToDatabase}>
                 <Text style={styles.primaryButtonText}>Save Trip</Text>
               </TouchableOpacity>
 
@@ -181,16 +167,7 @@ export default function TripResults({ route, navigation }) {
                 onPress={() =>
                   navigation.navigate("Home", {
                     screen: "Estimate",
-                    params: { 
-                      tripId: currentTripId,
-                      startLocation, 
-                      destination, 
-                      vehicle, 
-                      mpg, 
-                      gasPrice, 
-                      fuelType, 
-                      distance 
-                    },
+                    params: { tripId: currentTripId, startLocation, destination, vehicle, mpg, gasPrice, fuelType, distance },
                   })
                 }
               >
@@ -201,7 +178,7 @@ export default function TripResults({ route, navigation }) {
 
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={() => navigation.navigate("Home", { screen: "Plan" })}
+            onPress={navigateToHistory}
           >
             <Text style={styles.primaryButtonText}>Done</Text>
           </TouchableOpacity>
@@ -212,17 +189,21 @@ export default function TripResults({ route, navigation }) {
         transparent
         animationType="fade"
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={navigateToHistory}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={navigateToHistory}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Saved Trip!</Text>
-            <Text style={styles.modalMessage}>Go to Trips to see your saved trips.</Text>
+            <Text style={styles.modalTitle}>{isEditMode ? "Trip Updated!" : "Saved Trip!"}</Text>
+            <Text style={styles.modalMessage}>
+                {isEditMode 
+                    ? "Your changes have been successfully saved." 
+                    : "You can find this trip in your trip history."}
+            </Text>
             <TouchableOpacity
               style={styles.modalCloseButton}
-              onPress={() => setModalVisible(false)}
+              onPress={navigateToHistory}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>View Trips</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -265,6 +246,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     marginBottom: 24,
+    backgroundColor: DARK_THEME.primaryBackground,
   },
   resultsHeader: {
     color: DARK_THEME.primaryText,
@@ -334,7 +316,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: withAlpha(DARK_THEME.primaryBackground, 0.6),
+    backgroundColor: withAlpha(DARK_THEME.primaryBackground, 0.75),
     justifyContent: "center",
     alignItems: "center",
   },
