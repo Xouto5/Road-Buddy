@@ -26,8 +26,8 @@ import {
   Pressable,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { db, auth } from "../../../core/firebase/firebaseConfig";
@@ -40,21 +40,28 @@ import {
   deleteDoc,
   orderBy,
 } from "firebase/firestore";
-import { DARK_THEME } from "../../../shared/style/ColorScheme";
+import { DARK_THEME } from "../../../shared/style/ColorScheme"; 
 import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import polyline from "@mapbox/polyline";
 
-function TripSection({ title, items, onToggle, onDelete, onEdit }) {
+const withAlpha = (hexColor, alpha) => {
+  const hex = (hexColor || "").replace("#", "");
+  if (hex.length !== 6) return hexColor;
+  const int = Number.parseInt(hex, 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+function TripSection({ title, items, onToggle, onDelete, onEdit, onMapPress }) {
   if (!items || items.length === 0) return null;
 
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
-
-      <View style={styles.card}>
-        {items.map((item, index) => {
-          const isLast = index === items.length - 1;
-
+      <View>
+        {items.map((item) => {
           const displayDate = item.updatedAt?.toDate
             ? `Last Edited: ${item.updatedAt
                 .toDate()
@@ -81,7 +88,7 @@ function TripSection({ title, items, onToggle, onDelete, onEdit }) {
             : [];
 
           return (
-            <View key={item.id}>
+            <View key={item.id} style={styles.bubbleCard}>
               <View style={styles.rowWrapper}>
                 <Pressable style={styles.row} onPress={() => onToggle(item.id)}>
                   <View style={{ flex: 1 }}>
@@ -121,27 +128,32 @@ function TripSection({ title, items, onToggle, onDelete, onEdit }) {
               {item.expanded && (
                 <View style={styles.expandedContent}>
                   {points.length > 0 ? (
-                    <MapView
-                      style={styles.mapPreview}
-                      provider={PROVIDER_GOOGLE}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
-                      pitchEnabled={false}
-                      rotateEnabled={false}
-                      initialRegion={{
-                        latitude: points[Math.floor(points.length / 2)].latitude,
-                        longitude:
-                          points[Math.floor(points.length / 2)].longitude,
-                        latitudeDelta: 0.1,
-                        longitudeDelta: 0.1,
-                      }}
+                    <TouchableOpacity 
+                      activeOpacity={0.9} 
+                      onPress={() => onMapPress(item)}
                     >
-                      <Polyline
-                        coordinates={points}
-                        strokeColor={DARK_THEME.primaryText}
-                        strokeWidth={3}
-                      />
-                    </MapView>
+                      <MapView
+                        style={styles.mapPreview}
+                        provider={PROVIDER_GOOGLE}
+                        scrollEnabled={false}
+                        zoomEnabled={false}
+                        pitchEnabled={false}
+                        rotateEnabled={false}
+                        initialRegion={{
+                          latitude: points[Math.floor(points.length / 2)].latitude,
+                          longitude:
+                            points[Math.floor(points.length / 2)].longitude,
+                          latitudeDelta: 0.1,
+                          longitudeDelta: 0.1,
+                        }}
+                      >
+                        <Polyline
+                          coordinates={points}
+                          strokeColor={DARK_THEME.primaryText}
+                          strokeWidth={3}
+                        />
+                      </MapView>
+                    </TouchableOpacity>
                   ) : (
                     <View style={styles.mapPlaceholder}>
                       <Text style={styles.detailText}>
@@ -166,8 +178,6 @@ function TripSection({ title, items, onToggle, onDelete, onEdit }) {
                   </View>
                 </View>
               )}
-
-              {!isLast && <View style={styles.divider} />}
             </View>
           );
         })}
@@ -179,6 +189,15 @@ function TripSection({ title, items, onToggle, onDelete, onEdit }) {
 export default function TripsSummaryScreen({ navigation }) {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: "",
+    message: "",
+    primaryBtnText: "Done",
+    onPrimaryPress: () => setModalVisible(false),
+    secondaryBtnText: null,
+    onSecondaryPress: null,
+  });
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -240,36 +259,73 @@ export default function TripsSummaryScreen({ navigation }) {
     });
   };
 
-  const handleDelete = (id) => {
-    Alert.alert("Delete Trip", "Are you sure you want to discard this trip?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteDoc(doc(db, "trips", id));
-          } catch (e) {
-            Alert.alert("Error", "Could not delete trip.");
-          }
+  const handleMapPress = (trip) => {
+    navigation.navigate("Home", {
+      screen: "Overview",
+      params: {
+        tripId: trip.id, 
+        estDetail: {
+          distance: parseFloat(trip.distance) || 0,
+          duration: parseInt(trip.duration) || 0,
+          gasPrice: parseFloat(trip.gasPrice) || 0,
+          polylines: {
+            encodedPolyline: trip.overviewPolyline,
+          },
+        },
+        pointA: {
+          placePrediction: {
+            text: { text: trip.startLocation },
+          },
+        },
+        pointB: {
+          placePrediction: {
+            text: { text: trip.destination },
+          },
+        },
+        car: {
+          mpg_combined: parseFloat(trip.mpg) || 25,
+          label: trip.vehicle || "Vehicle",
         },
       },
-    ]);
+    });
+  };
+
+  const confirmDelete = async (id) => {
+    try {
+      await deleteDoc(doc(db, "trips", id));
+      setModalVisible(false);
+    } catch (e) {
+      setModalConfig({
+        title: "Error",
+        message: "Could not delete trip.",
+        primaryBtnText: "Okay",
+        onPrimaryPress: () => setModalVisible(false)
+      });
+    }
+  };
+
+  const handleDeleteRequest = (id) => {
+    setModalConfig({
+      title: "Delete Trip",
+      message: "Are you sure you want to discard this trip? This action cannot be undone.",
+      primaryBtnText: "Delete",
+      onPrimaryPress: () => confirmDelete(id),
+      secondaryBtnText: "Cancel",
+      onSecondaryPress: () => setModalVisible(false)
+    });
+    setModalVisible(true);
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safeArea, styles.loadingContainer]}>
+      <SafeAreaView style={[styles.safeArea, styles.loadingContainer]} edges={["left", "right", "top", "bottom"]}>
         <ActivityIndicator size="large" color={DARK_THEME.primaryText} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top", "bottom"]}>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.titleHeaderContainer}>
@@ -283,17 +339,58 @@ export default function TripsSummaryScreen({ navigation }) {
             title="Your Saved Trips"
             items={trips}
             onToggle={toggleTrip}
-            onDelete={handleDelete}
+            onDelete={handleDeleteRequest}
             onEdit={handleEdit}
+            onMapPress={handleMapPress}
           />
 
           {trips.length === 0 && (
-            <Text style={styles.emptyText}>
-              No saved trips yet. Start planning!
-            </Text>
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                No saved trips yet.
+              </Text>
+              <TouchableOpacity 
+                style={styles.startPlanningBtn}
+                onPress={() => navigation.navigate("Estimate")}
+              >
+                <Text style={styles.startPlanningBtnText}>Start Planning</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </ScrollView>
       </View>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalMessage}>{modalConfig.message}</Text>
+            
+            <View style={styles.modalActionRow}>
+                {modalConfig.secondaryBtnText && (
+                    <TouchableOpacity
+                        style={[styles.modalBtn, styles.modalSecondaryBtn]}
+                        onPress={modalConfig.onSecondaryPress}
+                    >
+                        <Text style={styles.modalSecondaryBtnText}>{modalConfig.secondaryBtnText}</Text>
+                    </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity
+                    style={styles.modalBtn}
+                    onPress={modalConfig.onPrimaryPress}
+                >
+                    <Text style={styles.modalBtnText}>{modalConfig.primaryBtnText}</Text>
+                </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -304,7 +401,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
-
   mainTitle: {
     color: DARK_THEME.primaryText,
     fontSize: 26,
@@ -312,19 +408,16 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textAlign: "center",
   },
-
   mainSubtitle: {
     color: DARK_THEME.placeholder,
     fontSize: 15,
     textAlign: "center",
   },
-
   rowWrapper: {
     flexDirection: "row",
     alignItems: "center",
     paddingRight: 8,
   },
-
   row: {
     flex: 1,
     flexDirection: "row",
@@ -333,61 +426,49 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-
   rowLabel: {
     color: DARK_THEME.primaryText,
     fontSize: 16,
     fontWeight: "600",
   },
-
   rowSubLabel: {
     color: DARK_THEME.placeholder,
     fontSize: 12,
     marginTop: 2,
   },
-
   actionButton: {
     padding: 10,
   },
-
   container: {
     flex: 1,
     backgroundColor: DARK_THEME.primaryBackground,
   },
-
   scrollContent: {
     paddingHorizontal: 18,
     paddingTop: 8,
     paddingBottom: 32,
   },
-
   section: {
     marginBottom: 24,
   },
-
   sectionTitle: {
     color: DARK_THEME.primaryText,
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 12,
   },
-
-  card: {
+  bubbleCard: {
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 12,
+    borderRadius: 16,
+    marginBottom: 12,
     overflow: "hidden",
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: DARK_THEME.primaryBorder,
-  },
-
-  expandedContent: {
     backgroundColor: DARK_THEME.primaryBackground,
   },
-
+  expandedContent: {
+    backgroundColor: DARK_THEME.primaryBackground,
+    paddingBottom: 4,
+  },
   mapPreview: {
     height: 120,
     marginHorizontal: 14,
@@ -396,7 +477,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
   },
-
   mapPlaceholder: {
     height: 120,
     marginHorizontal: 14,
@@ -408,33 +488,102 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
   },
-
   details: {
     paddingHorizontal: 14,
     paddingTop: 12,
     paddingBottom: 14,
   },
-
   detailText: {
     color: DARK_THEME.primaryText,
     fontSize: 13,
     marginBottom: 2,
   },
-
+  emptyContainer: {
+    marginTop: 60,
+    alignItems: "center",
+    gap: 20,
+  },
   emptyText: {
     color: DARK_THEME.placeholder,
     textAlign: "center",
-    marginTop: 50,
     fontSize: 16,
   },
-
+  startPlanningBtn: {
+    backgroundColor: DARK_THEME.primaryText,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: "100%",
+    maxWidth: 250,
+    alignItems: "center",
+  },
+  startPlanningBtnText: {
+    color: DARK_THEME.primaryBackground,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   safeArea: {
     flex: 1,
+    backgroundColor: DARK_THEME.primaryBackground,
   },
-
   loadingContainer: {
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: DARK_THEME.primaryBackground,
   },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: withAlpha(DARK_THEME.primaryBackground, 0.75), 
+    justifyContent: "center", 
+    alignItems: "center" 
+  },
+  modalBox: { 
+    backgroundColor: DARK_THEME.modalBackground, 
+    borderRadius: 14, 
+    padding: 28, 
+    width: "85%", 
+    alignItems: "center", 
+    gap: 12 
+  },
+  modalTitle: { 
+    color: DARK_THEME.primaryText, 
+    fontSize: 20, 
+    fontWeight: "bold" 
+  },
+  modalMessage: { 
+    color: DARK_THEME.placeholder, 
+    fontSize: 15, 
+    textAlign: "center",
+    lineHeight: 20
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+    width: '100%',
+    justifyContent: 'center'
+  },
+  modalBtn: { 
+    paddingVertical: 12, 
+    paddingHorizontal: 24, 
+    borderRadius: 8, 
+    backgroundColor: DARK_THEME.primaryText,
+    minWidth: 100,
+    alignItems: 'center'
+  },
+  modalBtnText: { 
+    color: DARK_THEME.primaryBackground, 
+    fontWeight: "bold", 
+    fontSize: 15 
+  },
+  modalSecondaryBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder
+  },
+  modalSecondaryBtnText: {
+    color: DARK_THEME.primaryText,
+    fontWeight: "bold",
+    fontSize: 15
+  }
 });

@@ -57,7 +57,7 @@ export async function handleGoogleAuth(idToken, accessToken) {
 // LINK GOOGLE ACCOUNT
 export async function linkGoogleAccount(idToken, accessToken) {
   try {
-    if (!auth.currentUser) {
+    if (!auth?.currentUser) {
       throw new Error("No logged-in user to link account.");
     }
 
@@ -80,7 +80,7 @@ export async function logOut() {
   }
 }
 
-// PASSWORD RESET (BETTER VERSION)
+// PASSWORD RESET
 export async function resetPassword(email) {
   try {
     await sendPasswordResetEmail(auth, email);
@@ -93,7 +93,7 @@ export async function resetPassword(email) {
 // VERIFY EMAIL
 export async function verifyEmail() {
   try {
-    if (!auth.currentUser) {
+    if (!auth?.currentUser) {
       throw new Error("No user logged in");
     }
 
@@ -104,16 +104,22 @@ export async function verifyEmail() {
   }
 }
 
-// CHECK EMAIL VERIFIED ||
-export function isUserVerified() {
-  auth.currentUser.reload()
-  return auth.currentUser.emailVerified;
+// CHECK EMAIL VERIFIED (Fixed Crash)
+export async function isUserVerified() {
+  try {
+    if (!auth?.currentUser) return false;
+    await auth.currentUser.reload();
+    return auth.currentUser.emailVerified;
+  } catch (error) {
+    console.error("Verification check failed:", error);
+    return false;
+  }
 }
 
-// LEGACY RESET (kept, but fixed)
+// LEGACY RESET
 export async function callReset(email) {
   try {
-    if (!auth.currentUser?.email) {
+    if (!auth?.currentUser?.email) {
       throw new Error("No email available");
     }
 

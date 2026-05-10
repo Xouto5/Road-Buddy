@@ -7,8 +7,7 @@ Author: Brian Siebert
 Date: 03-11-2026
 */
 
-// Import React hooks and React Native building blocks for form layout
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -19,409 +18,179 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
+  Modal,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { getAuth, createUserWithEmailAndPassword , sendEmailVerification} from "firebase/auth";
-// Shared dark theme colors used across app screens
+import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import { performFirestoreOperations } from "../../../core/firebase/firebaseConfig";
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+.[^\s@]+$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-import { createUser } from "../services/authServices";
-// Temporary options for selecting a vehicle type
-const carListOptions = ["Sedan", "SUV", "Truck", "Van"];
+const withAlpha = (hexColor, alpha) => {
+  const hex = (hexColor || "").replace("#", "");
+  if (hex.length !== 6) return hexColor;
+  const int = Number.parseInt(hex, 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
-// Main Create Account screen component
-export default function CreateNewAccountScreen({ navigation }) {
-  // Form state for each registration field
+export default function CreateNewAccountScreen({ navigation, setIsReady }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [carList, setCarList] = useState("");
-  const [isCarDropdownOpen, setIsCarDropdownOpen] = useState(false);
-  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  // UI / validation state
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: "",
+    message: "",
+    primaryBtnText: "Done",
+    onPrimaryPress: () => setModalVisible(false),
+  });
 
-  // Basic client-side validation
+  const showAlert = (title, message, btnText = "Okay", onPress = () => setModalVisible(false)) => {
+    setModalConfig({
+      title,
+      message,
+      primaryBtnText: btnText,
+      onPrimaryPress: onPress,
+    });
+    setModalVisible(true);
+  };
+
   const validate = () => {
-    if (!firstName.trim()) {
-      setError("Please enter your first name.");
-      return false;
-    }
-    if (!lastName.trim()) {
-      setError("Please enter your last name.");
-      return false;
-    }
-    if (!carList) {
-      setError("Please select a vehicle type.");
-      return false;
-    }
-    if (!phone.trim()) {
-      setError("Please enter your phone number.");
+    if (!firstName.trim() || !lastName.trim()) {
+      showAlert("Missing Info", "Please enter your full name.");
       return false;
     }
     if (!email.trim() || !EMAIL_REGEX.test(email)) {
-      setError("Please enter a valid email address.");
+      showAlert("Invalid Email", "Please enter a valid email address.");
       return false;
     }
-    if (!password) {
-      setError("Please enter a password.");
-      return false;
-    }
-
-    // requirement: at least 6 characters
     if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+      showAlert("Weak Password", "Password must be at least 6 characters.");
       return false;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      showAlert("Mismatch", "Passwords do not match.");
       return false;
     }
-    setError("");
     return true;
   };
 
-  // Placeholder submit handler until auth service is connected
   const handleCreateAccount = async () => {
-    // Placeholder for account creation service integration.
     if (!validate()) return;
 
     setLoading(true);
     const auth = getAuth();
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password,
+      await createUserWithEmailAndPassword(auth, email, password);
+      await performFirestoreOperations(firstName, lastName, email, "", "");
+      
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+      }
+      
+      setLoading(false);
+
+      showAlert(
+        "Welcome to Road Buddy!", 
+        "Your account has been created. Tap below to start planning your first trip.",
+        "Continue to Home",
+        () => {
+            setModalVisible(false);
+            if (setIsReady) setIsReady(true);
+        }
       );
 
-      performFirestoreOperations(firstName,lastName,email,"Camry",phone);
-      sendEmailVerification(auth.currentUser)
-
-
-      const user = userCredential.user;
-      
-      // Feedback / navigation after successful signup
-      setLoading(false);
-      Alert.alert("Account created", "Your account was created successfully.");
-      // Navigate back or to main/home screen:
-      navigation.goBack();
     } catch (err) {
       setLoading(false);
-      // Map common Firebase errors to readable messages
-      let message = "An error occurred while creating your account.";
-      if (err.code) {
-        switch (err.code) {
-          case "auth/email-already-in-use":
-            message = "The email address is already in use.";
-            break;
-          case "auth/invalid-email":
-            message = "The email address is invalid.";
-            break;
-          case "auth/weak-password":
-            message = "The password is too weak. Try a longer password.";
-            break;
-          default:
-            message = err.message || message;
-        }
-      } else if (err.message) {
-        message = err.message;
-      }
-      setError(message);
+      let message = "An error occurred.";
+      if (err.code === "auth/email-already-in-use") message = "Email already in use.";
+      showAlert("Account Error", message);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.screen}
-    >
-      {/* Commented out since Stack Screen comes with back screen
-	  Bryan Cardeno */}
-      {/* <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-				<Text style={styles.backText}>{"<"}</Text>
-			</TouchableOpacity> */}
+    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Ionicons name="chevron-back" size={28} color={DARK_THEME.primaryText} />
+      </TouchableOpacity>
 
-      {/* Header bar with icon + screen title */}
-      <View style={styles.header}>
-        <View style={styles.headerIconCell}>
-          <Ionicons
-            name="person-outline"
-            size={18}
-            color={DARK_THEME.primaryText}
-          />
-        </View>
-        <Text style={styles.headerTitle}>Create Account</Text>
-      </View>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.flex}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.headerContainer}>
+            <Text style={styles.mainTitle}>Create Account</Text>
+            <Text style={styles.subTitle}>Join us to start planning your next trip.</Text>
+          </View>
 
-      {/* Scrollable form body for smaller screens and keyboard safety */}
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Basic profile fields */}
-        <TextInput
-          style={styles.input}
-          placeholder="First Name"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={firstName}
-          onChangeText={(t) => setFirstName(t)}
-        />
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <View style={styles.fieldRow}>
+                <TextInput style={styles.fieldInput} placeholder="First Name" placeholderTextColor={DARK_THEME.placeholder} value={firstName} onChangeText={setFirstName} />
+              </View>
+              <View style={styles.fieldRow}>
+                <TextInput style={styles.fieldInput} placeholder="Last Name" placeholderTextColor={DARK_THEME.placeholder} value={lastName} onChangeText={setLastName} />
+              </View>
+              <View style={styles.fieldRow}>
+                <TextInput style={styles.fieldInput} placeholder="Email" placeholderTextColor={DARK_THEME.placeholder} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+              </View>
+              <View style={styles.fieldRow}>
+                <TextInput style={styles.fieldInput} placeholder="Password" placeholderTextColor={DARK_THEME.placeholder} value={password} onChangeText={setPassword} secureTextEntry />
+              </View>
+              <View style={styles.fieldRow}>
+                <TextInput style={styles.fieldInput} placeholder="Confirm Password" placeholderTextColor={DARK_THEME.placeholder} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+              </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Last Name"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={lastName}
-          onChangeText={(t) => setLastName(t)}
-        />
-
-        {/* Car selector dropdown */}
-        <View style={styles.dropdownContainer}>
-          <TouchableOpacity
-            style={styles.dropdownTrigger}
-            onPress={() => setIsCarDropdownOpen((prev) => !prev)}
-            activeOpacity={0.85}
-          >
-            <Text
-              style={
-                carList
-                  ? styles.dropdownValueText
-                  : styles.dropdownPlaceholderText
-              }
-            >
-              {carList || "Car List"}
-            </Text>
-            <Ionicons
-              name={isCarDropdownOpen ? "chevron-up" : "chevron-down"}
-              size={16}
-              color={DARK_THEME.primaryText}
-            />
-          </TouchableOpacity>
-
-          {isCarDropdownOpen ? (
-            <View style={styles.dropdownMenu}>
-              {carListOptions.map((option, index) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[
-                    styles.dropdownOption,
-                    index === carListOptions.length - 1
-                      ? styles.dropdownOptionLast
-                      : null,
-                  ]}
-                  onPress={() => {
-                    setCarList(option);
-                    setIsCarDropdownOpen(false);
-                  }}
-                >
-                  <Text style={styles.dropdownOptionText}>{option}</Text>
-                </TouchableOpacity>
-              ))}
+              <TouchableOpacity style={styles.primaryButton} onPress={handleCreateAccount} disabled={loading}>
+                {loading ? <ActivityIndicator color={DARK_THEME.primaryBackground} /> : <Text style={styles.primaryButtonText}>Create Account</Text>}
+              </TouchableOpacity>
             </View>
-          ) : null}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <Modal transparent animationType="fade" visible={modalVisible}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalMessage}>{modalConfig.message}</Text>
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity style={styles.modalBtn} onPress={modalConfig.onPrimaryPress}>
+                <Text style={styles.modalBtnText}>{modalConfig.primaryBtnText}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-
-        {/* Contact and credential fields */}
-        <TextInput
-          style={styles.input}
-          placeholder="Phone"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={phone}
-          onChangeText={(t) => setPhone(t)}
-          keyboardType="phone-pad"
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={email}
-          onChangeText={(t) => setEmail(t)}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={password}
-          onChangeText={(t) => setPassword(t)}
-          secureTextEntry
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          placeholderTextColor={DARK_THEME.placeholder}
-          value={confirmPassword}
-          onChangeText={(t) => setConfirmPassword(t)}
-          secureTextEntry
-        />
-
-        {/* Error message */}
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        {/* Primary account creation action */}
-        <TouchableOpacity
-          style={[
-            styles.createButton,
-            loading ? styles.createButtonDisabled : null,
-          ]}
-          onPress={handleCreateAccount}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={DARK_THEME.primaryBackground} />
-          ) : (
-            <Text style={styles.createButtonText}>Create Account</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
-// Styles for Create New Account screen components
 const styles = StyleSheet.create({
-  // Root screen container
-  screen: {
-    flex: 1,
-    backgroundColor: DARK_THEME.primaryBackground,
-    paddingTop: 20,
-  },
-  // Top-left back arrow, matching Login and Estimate screens
-  backButton: {
-    marginTop: 10,
-    marginBottom: 20,
-    marginLeft: 20,
-    alignSelf: "flex-start",
-  },
-  backText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 28,
-    fontWeight: "bold",
-  },
-  // Top header card
-  header: {
-    marginTop: 0,
-    marginHorizontal: 18,
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 8,
-    height: 52,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: DARK_THEME.primaryBackground,
-  },
-  // Left icon cell in the header
-  headerIconCell: {
-    width: 46,
-    height: "100%",
-    borderRightWidth: 1,
-    borderRightColor: DARK_THEME.primaryBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  // Header title text
-  headerTitle: {
-    marginLeft: 16,
-    color: DARK_THEME.primaryText,
-    fontSize: 19,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  // Scrollable content padding
-  content: {
-    paddingHorizontal: 28,
-    paddingTop: 44,
-    paddingBottom: 36,
-  },
-  // Shared text input style
-  input: {
-    height: 40,
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 6,
-    marginBottom: 12,
-    color: DARK_THEME.primaryText,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    backgroundColor: DARK_THEME.primaryBackground,
-  },
-  // Container for dropdown field and expanded options
-  dropdownContainer: {
-    marginBottom: 12,
-  },
-  // Dropdown trigger field
-  dropdownTrigger: {
-    height: 40,
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    backgroundColor: DARK_THEME.primaryBackground,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  // Placeholder text shown before user picks a car type
-  dropdownPlaceholderText: {
-    color: DARK_THEME.placeholder,
-    fontSize: 14,
-  },
-  // Selected value text in dropdown trigger
-  dropdownValueText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 14,
-  },
-  // Expanded dropdown menu card
-  dropdownMenu: {
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 6,
-    backgroundColor: DARK_THEME.modalBackground,
-  },
-  // Each selectable option row
-  dropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: DARK_THEME.primaryBorder,
-  },
-  // Option text style
-  dropdownOptionText: {
-    color: DARK_THEME.primaryText,
-    fontSize: 14,
-  },
-  // Remove divider from last menu item
-  dropdownOptionLast: {
-    borderBottomWidth: 0,
-  },
-  // Main submit button style
-  createButton: {
-    marginTop: 6,
-    backgroundColor: DARK_THEME.primaryText,
-    borderRadius: 6,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  // Main submit button text
-  createButtonText: {
-    color: DARK_THEME.primaryBackground,
-    fontSize: 14,
-    fontWeight: "700",
-  },
+  flex: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: DARK_THEME.primaryBackground },
+  backButton: { paddingHorizontal: 16, paddingTop: 10 },
+  scrollContent: { paddingBottom: 40 },
+  headerContainer: { paddingTop: 20, paddingBottom: 12, alignItems: "center", paddingHorizontal: 20 },
+  mainTitle: { color: DARK_THEME.primaryText, fontSize: 28, fontWeight: "700" },
+  subTitle: { color: DARK_THEME.placeholder, fontSize: 15, marginTop: 8, textAlign: "center" },
+  form: { width: "100%", maxWidth: 360, alignSelf: "center", paddingHorizontal: 16, paddingTop: 20 },
+  inputGroup: { gap: 14 },
+  fieldRow: { height: 54, borderRadius: 12, borderWidth: 1, borderColor: DARK_THEME.primaryBorder, paddingHorizontal: 14, justifyContent: "center" },
+  fieldInput: { color: DARK_THEME.primaryText, fontSize: 16 },
+  primaryButton: { backgroundColor: DARK_THEME.primaryText, padding: 16, borderRadius: 10, alignItems: "center", marginTop: 10 },
+  primaryButtonText: { color: DARK_THEME.primaryBackground, fontWeight: "bold", fontSize: 16 },
+  modalOverlay: { flex: 1, backgroundColor: withAlpha(DARK_THEME.primaryBackground, 0.85), justifyContent: "center", alignItems: "center" },
+  modalBox: { backgroundColor: DARK_THEME.modalBackground, borderRadius: 14, padding: 28, width: "85%", alignItems: "center", gap: 12, borderWidth: 1, borderColor: DARK_THEME.primaryBorder },
+  modalTitle: { color: DARK_THEME.primaryText, fontSize: 20, fontWeight: "bold" },
+  modalMessage: { color: DARK_THEME.placeholder, fontSize: 15, textAlign: "center", lineHeight: 20 },
+  modalActionRow: { marginTop: 10, width: "100%", alignItems: "center" },
+  modalBtn: { paddingVertical: 14, paddingHorizontal: 30, borderRadius: 10, backgroundColor: DARK_THEME.primaryText, width: '100%', alignItems: 'center' },
+  modalBtnText: { color: DARK_THEME.primaryBackground, fontWeight: "bold", fontSize: 16 }
 });

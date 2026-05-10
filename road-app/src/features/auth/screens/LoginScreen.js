@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -18,62 +18,39 @@ import * as Google from "expo-auth-session/providers/google";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import {
   loginUser,
-  observeAuthState,
   handleGoogleAuth,
 } from "../services/authServices";
 
 WebBrowser.maybeCompleteAuthSession();
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, setIsReady }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
   const [showError, setShowError] = useState(false);
   const [errors, setErrors] = useState({ username: false, password: false });
-
   const [modalVisible, setModalVisible] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const unsub = observeAuthState((user) => {
-      if (user && isActive) {
-        navigation.replace("TempMenu");
-      }
-    });
-
-    return () => {
-      isActive = false;
-      unsub();
-    };
-  }, []);
-
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId:
-      "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
+    expoClientId: "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
     iosClientId: "YOUR_IOS_CLIENT_ID",
     androidClientId: "YOUR_ANDROID_CLIENT_ID",
-    webClientId:
-      "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
+    webClientId: "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
   });
 
   useEffect(() => {
-    console.log("Google response:", response); // ← ADD THIS LINE
-
     const handleGoogleLogin = async () => {
       if (response?.type === "success") {
         const idToken = response.authentication?.idToken;
         const accessToken = response.authentication?.accessToken;
-
         const result = await handleGoogleAuth(idToken, accessToken);
-
-        if (!result.success) {
+        
+        if (result.success) {
+          if (setIsReady) setIsReady(true);
+        } else {
           setModalVisible(true);
         }
       }
     };
-
     handleGoogleLogin();
   }, [response]);
 
@@ -83,39 +60,29 @@ export default function LoginScreen({ navigation }) {
 
     if (!username || !password) {
       setShowError(true);
-      setErrors({
-        username: !username,
-        password: !password,
-      });
+      setErrors({ username: !username, password: !password });
+      setFailedAttempts((prev) => prev + 1);
       return;
     }
 
     try {
       const result = await loginUser(username.trim(), password);
 
-      if (!result || result.success === false) {
+      if (result && result.success) {
+        setFailedAttempts(0);
+        console.log("Login successful");
+        if (setIsReady) setIsReady(true);
+      } else {
         setFailedAttempts((prev) => prev + 1);
-
-        setErrors({
-          username: true,
-          password: true,
-        });
-
+        setErrors({ username: true, password: true });
         setShowError(true);
         setModalVisible(true);
-      } else {
-        setFailedAttempts(0);
-        navigation.navigate("TempMenu");
-      }
+      } 
     } catch (error) {
       setFailedAttempts((prev) => prev + 1);
-
-      setErrors({
-        username: true,
-        password: true,
-      });
-
+      setErrors({ username: true, password: true });
       setModalVisible(true);
+      console.error("Login Error:", error);
     }
   };
 
@@ -123,7 +90,7 @@ export default function LoginScreen({ navigation }) {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <Modal
           animationType="fade"
@@ -164,10 +131,7 @@ export default function LoginScreen({ navigation }) {
           )}
 
           <TextInput
-            style={[
-              styles.input,
-              errors.username && { borderColor: "red", borderWidth: 2 },
-            ]}
+            style={[styles.input, errors.username && { borderColor: "red", borderWidth: 2 }]}
             placeholder="Username"
             placeholderTextColor={DARK_THEME.placeholder}
             value={username}
@@ -180,10 +144,7 @@ export default function LoginScreen({ navigation }) {
           />
 
           <TextInput
-            style={[
-              styles.input,
-              errors.password && { borderColor: "red", borderWidth: 2 },
-            ]}
+            style={[styles.input, errors.password && { borderColor: "red", borderWidth: 2 }]}
             placeholder="Password"
             placeholderTextColor={DARK_THEME.placeholder}
             value={password}
@@ -214,32 +175,18 @@ export default function LoginScreen({ navigation }) {
           >
             <Text style={styles.socialButtonText}>Login with Google</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Login with X</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Login with Apple</Text>
-          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate("ResetPassword")}
-        >
-          <Text
-            style={[
-              styles.linkText,
-              failedAttempts >= 3 && styles.highlightedLink,
-            ]}
-          >
+        <TouchableOpacity onPress={() => navigation.navigate("ResetPassword")}>
+          <Text style={[
+            styles.linkText, 
+            failedAttempts >= 3 ? styles.highlightedLink : null
+          ]}>
             Forgot your Password?
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate("CreateAccount")}
-        >
+        <TouchableOpacity onPress={() => navigation.navigate("CreateAccount")}>
           <Text style={styles.linkText}>Create New Account</Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
@@ -252,6 +199,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DARK_THEME.primaryBackground,
     paddingHorizontal: 20,
+    justifyContent: "center",
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 80,
+    marginTop: 20,
+  },
+  logo: {
+    width: 300,
+    height: 150,
+  },
+  inputContainer: {
+    width: "100%",
+    marginBottom: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 15,
+    color: DARK_THEME.primaryText,
+    fontSize: 16,
   },
   errorMessage: {
     color: "red",
@@ -301,33 +271,12 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  logo: {
-    width: 330,
-    height: 190,
-  },
-  inputContainer: {
-    width: "100%",
-    marginBottom: 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 20,
-    color: DARK_THEME.primaryText,
-    fontSize: 16,
-  },
   loginButton: {
     backgroundColor: "#fff",
     paddingVertical: 15,
     borderRadius: 8,
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 15,
   },
   loginButtonText: {
     color: "#000",
@@ -336,7 +285,8 @@ const styles = StyleSheet.create({
   },
   socialContainer: {
     width: "100%",
-    marginTop: 10,
+    marginTop: 5,
+    marginBottom: 10,
   },
   socialButton: {
     backgroundColor: "#fff",
@@ -353,10 +303,11 @@ const styles = StyleSheet.create({
   linkText: {
     color: DARK_THEME.primaryText,
     fontSize: 14,
-    marginBottom: 10,
+    marginBottom: 8,
     textAlign: "center",
   },
   safeArea: {
     flex: 1,
+    backgroundColor: DARK_THEME.primaryBackground,
   },
 });
