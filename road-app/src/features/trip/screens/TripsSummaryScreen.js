@@ -345,9 +345,17 @@ export default function TripsSummaryScreen({ navigation }) {
           />
 
           {trips.length === 0 && (
-            <Text style={styles.emptyText}>
-              No saved trips yet. Start planning!
-            </Text>
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                No saved trips yet.
+              </Text>
+              <TouchableOpacity 
+                style={styles.startPlanningBtn}
+                onPress={() => navigation.navigate("Estimate")}
+              >
+                <Text style={styles.startPlanningBtnText}>Start Planning</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </ScrollView>
       </View>
@@ -490,11 +498,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 2,
   },
+  emptyContainer: {
+    marginTop: 60,
+    alignItems: "center",
+    gap: 20,
+  },
   emptyText: {
     color: DARK_THEME.placeholder,
     textAlign: "center",
-    marginTop: 50,
     fontSize: 16,
+  },
+  startPlanningBtn: {
+    backgroundColor: DARK_THEME.primaryText,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: "100%",
+    maxWidth: 250,
+    alignItems: "center",
+  },
+  startPlanningBtnText: {
+    color: DARK_THEME.primaryBackground,
+    fontSize: 16,
+    fontWeight: "bold",
   },
   safeArea: {
     flex: 1,

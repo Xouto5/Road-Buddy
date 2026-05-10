@@ -1,3 +1,10 @@
+/*
+TripDetailsScreen Component
+Displays the map route, cost metrics, and trip actions.
+
+Author: Bryan Cardeno
+*/
+
 import {
   View,
   Text,
@@ -50,7 +57,7 @@ export default function TripDetailsScreen({ route }) {
     longitudeDelta: 0.1,
   });
 
-  const snapPoints = useMemo(() => ["4%", "45%"], []);
+  const snapPoints = useMemo(() => ["3%", "25%"], []);
   const hasTripSelected = polylines.length > 0 && estimate !== null;
 
   const openInMaps = async () => {
@@ -220,13 +227,6 @@ export default function TripDetailsScreen({ route }) {
 
                   <TouchableOpacity
                     style={styles.primaryButton}
-                    onPress={() => navigation.navigate("Home", { screen: "Plan" })}
-                  >
-                    <Text style={styles.primaryButtonText}>Add Stop</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.primaryButton}
                     onPress={() => {
                       setPolylines([]);
                       setEstimate(null);
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   bottomSheet: { backgroundColor: DARK_THEME.primaryBackground, borderTopWidth: 1, borderTopColor: DARK_THEME.primaryBorder },
   bottomSheetHandle: { backgroundColor: DARK_THEME.primaryText, width: 40 },
-  bottomSheetContent: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 10 },
+  bottomSheetContent: { flex: 1, justifyContent: "flex-start", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingTop: 10 },
   primaryButton: { backgroundColor: DARK_THEME.primaryText, padding: 16, borderRadius: 10, alignItems: "center", width: "100%" },
   primaryButtonText: { color: DARK_THEME.primaryBackground, fontWeight: "bold", fontSize: 16 },
   buttonDisabled: { backgroundColor: "#333333", opacity: 0.8 },

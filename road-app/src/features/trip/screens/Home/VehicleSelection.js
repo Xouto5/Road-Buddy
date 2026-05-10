@@ -14,7 +14,6 @@ import {
   Text,
   Pressable,
 } from "react-native";
-import SelectField from "../../../../shared/component/SelectField";
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 import sampleCarData from "../../../../shared/sample-data/CarData";
 import { useState } from "react";

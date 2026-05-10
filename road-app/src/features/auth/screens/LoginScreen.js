@@ -23,16 +23,13 @@ import {
 
 WebBrowser.maybeCompleteAuthSession();
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, setIsReady }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
   const [showError, setShowError] = useState(false);
   const [errors, setErrors] = useState({ username: false, password: false });
-
   const [modalVisible, setModalVisible] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
-
   const [request, response, promptAsync] = Google.useAuthRequest({
     expoClientId: "944461914532-jnl46dug30ngr3v3m5en7e7n1fpi691e.apps.googleusercontent.com",
     iosClientId: "YOUR_IOS_CLIENT_ID",
@@ -46,7 +43,10 @@ export default function LoginScreen({ navigation }) {
         const idToken = response.authentication?.idToken;
         const accessToken = response.authentication?.accessToken;
         const result = await handleGoogleAuth(idToken, accessToken);
-        if (!result.success) {
+        
+        if (result.success) {
+          if (setIsReady) setIsReady(true);
+        } else {
           setModalVisible(true);
         }
       }
@@ -58,7 +58,6 @@ export default function LoginScreen({ navigation }) {
     setShowError(false);
     setErrors({ username: false, password: false });
 
-    // Validation Check
     if (!username || !password) {
       setShowError(true);
       setErrors({ username: !username, password: !password });
@@ -67,12 +66,12 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
-      // Attempt Authentication
       const result = await loginUser(username.trim(), password);
 
       if (result && result.success) {
         setFailedAttempts(0);
         console.log("Login successful");
+        if (setIsReady) setIsReady(true);
       } else {
         setFailedAttempts((prev) => prev + 1);
         setErrors({ username: true, password: true });
@@ -176,14 +175,6 @@ export default function LoginScreen({ navigation }) {
           >
             <Text style={styles.socialButtonText}>Login with Google</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Login with X</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Login with Apple</Text>
-          </TouchableOpacity>
         </View>
 
         <TouchableOpacity onPress={() => navigation.navigate("ResetPassword")}>
@@ -209,6 +200,28 @@ const styles = StyleSheet.create({
     backgroundColor: DARK_THEME.primaryBackground,
     paddingHorizontal: 20,
     justifyContent: "center",
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 80,
+    marginTop: 20,
+  },
+  logo: {
+    width: 300,
+    height: 150,
+  },
+  inputContainer: {
+    width: "100%",
+    marginBottom: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 15,
+    color: DARK_THEME.primaryText,
+    fontSize: 16,
   },
   errorMessage: {
     color: "red",
@@ -258,28 +271,6 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-    marginTop: 20,
-  },
-  logo: {
-    width: 300,
-    height: 150,
-  },
-  inputContainer: {
-    width: "100%",
-    marginBottom: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 15,
-    color: DARK_THEME.primaryText,
-    fontSize: 16,
-  },
   loginButton: {
     backgroundColor: "#fff",
     paddingVertical: 15,
@@ -295,6 +286,7 @@ const styles = StyleSheet.create({
   socialContainer: {
     width: "100%",
     marginTop: 5,
+    marginBottom: 10,
   },
   socialButton: {
     backgroundColor: "#fff",
