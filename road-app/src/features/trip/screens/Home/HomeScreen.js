@@ -32,7 +32,8 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   ScrollView, 
-  ActivityIndicator 
+  ActivityIndicator,
+  Image 
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -57,7 +58,6 @@ export default function HomeScreen({ navigation }) {
   
   const user = auth.currentUser;
 
-  // UPDATED: Now uses useFocusEffect to refresh the name whenever the screen is focused
   useFocusEffect(
     useCallback(() => {
       const fetchName = async () => {
@@ -76,7 +76,6 @@ export default function HomeScreen({ navigation }) {
     }, [user])
   );
 
-  //Fetching ONLY the most recent trip from Firestore
   useEffect(() => {
     if (!user) {
       setLoading(false);
@@ -161,9 +160,16 @@ export default function HomeScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
         <View style={styles.header}>
-          <View>
-            <Text style={styles.welcomeText}>Hello, {firstName}!</Text>
-            <Text style={styles.subtitle}>Ready for your next journey?</Text>
+          <View style={styles.welcomeContainer}>
+            <Image 
+              source={require("../../../../../assets/images/RoadBuddyLogoText.png")} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <View>
+                <Text style={styles.welcomeText}>Hello, {firstName}!</Text>
+                <Text style={styles.subtitle}>Ready for your next journey?</Text>
+            </View>
           </View>
           <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
             <Ionicons name="person-circle-outline" size={42} color={DARK_THEME.primaryText} />
@@ -248,6 +254,8 @@ const styles = StyleSheet.create({
     alignItems: "center", 
     marginBottom: 32 
   },
+  welcomeContainer: { flexDirection: "row", alignItems: "center", gap: 12 },
+  logo: { width: 50, height: 50 }, 
   welcomeText: { color: DARK_THEME.primaryText, fontSize: 30, fontWeight: "bold" },
   subtitle: { color: DARK_THEME.placeholder, fontSize: 16, marginTop: 2 },
   
