@@ -40,7 +40,7 @@ import {
   deleteDoc,
   orderBy,
 } from "firebase/firestore";
-import { DARK_THEME } from "../../../shared/style/ColorScheme";
+import { DARK_THEME } from "../../../shared/style/ColorScheme"; 
 import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import polyline from "@mapbox/polyline";
 
@@ -244,6 +244,7 @@ export default function TripsSummaryScreen({ navigation }) {
     navigation.navigate("Home", {
       screen: "Overview",
       params: {
+        tripId: trip.id, 
         estDetail: {
           distance: parseFloat(trip.distance) || 0,
           duration: parseInt(trip.duration) || 0,

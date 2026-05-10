@@ -24,29 +24,29 @@ import MapView, { Polyline } from "react-native-maps";
 import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-
 import { decode } from "@googlemaps/polyline-codec";
-
 import { calcGasCost } from "../../../../shared/utility/utils";
 import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 
 export default function TripDetailsScreen({ route }) {
   const navigation = useNavigation();
-
   const bottomSheetRef = useRef(null);
 
   const { tripId = null } = route.params ?? {};
 
   const [polylines, setPolylines] = useState([]);
   const [estimate, setEstimate] = useState(null);
+  
   const [initRegion, setInitRegion] = useState({
     latitude: 34.18069650767359,
     longitude: -117.32523415647755,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
+    latitudeDelta: 0.1,
+    longitudeDelta: 0.1,
   });
 
   const snapPoints = useMemo(() => ["4%", "45%"], []);
+
+  const hasTripSelected = polylines.length > 0 && estimate !== null;
 
   const handleSheetChanges = useCallback((index) => {
     console.log("Bottom sheet index:", index);
@@ -62,7 +62,6 @@ export default function TripDetailsScreen({ route }) {
     const destination = polylines[polylines.length - 1];
 
     let url;
-
     if (Platform.OS === "ios") {
       url = `http://maps.apple.com/?saddr=${origin.latitude},${origin.longitude}&daddr=${destination.latitude},${destination.longitude}&dirflg=d`;
     } else {
@@ -71,21 +70,22 @@ export default function TripDetailsScreen({ route }) {
 
     try {
       const supported = await Linking.canOpenURL(url);
-
       if (!supported) {
         Alert.alert("Maps unavailable", "Could not open this route in Maps.");
         return;
       }
-
       await Linking.openURL(url);
     } catch (error) {
-      console.log(error);
       Alert.alert("Maps Error", "Could not open Maps.");
     }
   };
 
   useEffect(() => {
-    if (!route?.params) return;
+    if (!route?.params || !route.params.estDetail) {
+      setPolylines([]);
+      setEstimate(null);
+      return;
+    }
 
     const { estDetail, pointA, pointB, car } = route.params;
 
@@ -97,7 +97,6 @@ export default function TripDetailsScreen({ route }) {
     if (encodedPolyline) {
       try {
         const decoded = decode(encodedPolyline);
-
         const mappedDecode = decoded.map((point) => ({
           latitude: point[0],
           longitude: point[1],
@@ -105,7 +104,6 @@ export default function TripDetailsScreen({ route }) {
 
         if (mappedDecode.length > 0) {
           setPolylines(mappedDecode);
-
           setInitRegion({
             latitude: mappedDecode[0].latitude,
             longitude: mappedDecode[0].longitude,
@@ -122,8 +120,7 @@ export default function TripDetailsScreen({ route }) {
       distance: estDetail?.distance || 0,
       duration: estDetail?.duration || 0,
       startName: pointA?.placePrediction?.text?.text || "Unknown start",
-      destinationName:
-        pointB?.placePrediction?.text?.text || "Unknown destination",
+      destinationName: pointB?.placePrediction?.text?.text || "Unknown destination",
       gasPrice: estDetail?.gasPrice || 0,
       vehicle: car || {},
     });
@@ -142,8 +139,13 @@ export default function TripDetailsScreen({ route }) {
     <GestureHandlerRootView style={styles.gestureRoot}>
       <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
         <View style={styles.container}>
-          <MapView style={styles.map} initialRegion={initRegion}>
-            {polylines.length > 0 && (
+          
+          <MapView 
+            style={styles.map} 
+            region={hasTripSelected ? undefined : initRegion}
+            initialRegion={hasTripSelected ? initRegion : undefined}
+          >
+            {hasTripSelected && (
               <Polyline
                 coordinates={polylines}
                 strokeColor="red"
@@ -152,41 +154,44 @@ export default function TripDetailsScreen({ route }) {
             )}
           </MapView>
 
-          <View style={styles.tripDetail}>
-            <View style={styles.info}>
-              <View style={styles.metricsRow}>
-                <Text style={styles.text}>{estimate?.distance || 0} mi</Text>
-                <Text style={styles.text}>Cost ${estimatedCost}</Text>
-                <Text style={styles.text}>{estimate?.duration || 0} min</Text>
-              </View>
+          {hasTripSelected && (
+            <View style={styles.tripDetail}>
+              <View style={styles.info}>
+                <View style={styles.metricsRow}>
+                  <Text style={styles.text}>{estimate?.distance || 0} mi</Text>
+                  <Text style={styles.text}>Cost ${estimatedCost}</Text>
+                  <Text style={styles.text}>{estimate?.duration || 0} min</Text>
+                </View>
 
-              <View style={styles.addressRow}>
-                <Text style={styles.label}>From: </Text>
-                <ScrollView style={styles.scroll} horizontal showsHorizontalScrollIndicator={false}>
-                  <Text style={styles.text}>{estimate?.startName || ""}</Text>
-                </ScrollView>
-              </View>
+                <View style={styles.addressRow}>
+                  <Text style={styles.label}>From: </Text>
+                  <ScrollView style={styles.scroll} horizontal showsHorizontalScrollIndicator={false}>
+                    <Text style={styles.text}>{estimate?.startName || ""}</Text>
+                  </ScrollView>
+                </View>
 
-              <View style={styles.addressRow}>
-                <Text style={styles.label}>To: </Text>
-                <ScrollView style={styles.scroll} horizontal showsHorizontalScrollIndicator={false}>
-                  <Text style={styles.text}>
-                    {estimate?.destinationName || ""}
-                  </Text>
-                </ScrollView>
+                <View style={styles.addressRow}>
+                  <Text style={styles.label}>To: </Text>
+                  <ScrollView style={styles.scroll} horizontal showsHorizontalScrollIndicator={false}>
+                    <Text style={styles.text}>
+                      {estimate?.destinationName || ""}
+                    </Text>
+                  </ScrollView>
+                </View>
               </View>
             </View>
-          </View>
+          )}
 
-          <View style={styles.utilButtonsContainer}>
-            <View style={styles.iconContainer}>
-              <Feather name="star" size={30} color={DARK_THEME.primaryBackground} />
+          {hasTripSelected && (
+            <View style={styles.utilButtonsContainer}>
+              <View style={styles.iconContainer}>
+                <Feather name="star" size={30} color={DARK_THEME.primaryBackground} />
+              </View>
+              <View style={styles.iconContainer}>
+                <AntDesign name="car" size={30} color={DARK_THEME.primaryBackground} />
+              </View>
             </View>
-
-            <View style={styles.iconContainer}>
-              <AntDesign name="car" size={30} color={DARK_THEME.primaryBackground} />
-            </View>
-          </View>
+          )}
 
           <BottomSheet
             ref={bottomSheetRef}
@@ -198,43 +203,53 @@ export default function TripDetailsScreen({ route }) {
             enablePanDownToClose={false}
           >
             <BottomSheetView style={styles.bottomSheetContent}>
-              <Pressable style={styles.btnContainer} onPress={openInMaps}>
-                <View style={styles.bottomSheetBtn}>
-                  <Text style={styles.calcBtn}>Open in Maps</Text>
-                </View>
-              </Pressable>
+              {hasTripSelected ? (
+                <>
+                  <Pressable style={styles.btnContainer} onPress={openInMaps}>
+                    <View style={styles.bottomSheetBtn}>
+                      <Text style={styles.calcBtn}>Open in Maps</Text>
+                    </View>
+                  </Pressable>
+                  
+                  {!tripId && (
+                    <Pressable style={styles.btnContainer} onPress={() => console.log("save pressed")}>
+                      <View style={styles.bottomSheetBtn}>
+                        <Text style={styles.calcBtn}>Save Trip</Text>
+                      </View>
+                    </Pressable>
+                  )}
 
-              {!tripId && (
+                  <Pressable
+                    style={styles.btnContainer}
+                    onPress={() => navigation.navigate("Home", { screen: "Plan" })}
+                  >
+                    <View style={styles.bottomSheetBtn}>
+                      <Text style={styles.calcBtn}>Add Stop</Text>
+                    </View>
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.btnContainer}
+                    onPress={() => {
+                      setPolylines([]);
+                      setEstimate(null);
+                    }}
+                  >
+                    <View style={styles.bottomSheetBtn}>
+                      <Text style={styles.calcBtn}>Close Trip</Text>
+                    </View>
+                  </Pressable>
+                </>
+              ) : (
                 <Pressable
                   style={styles.btnContainer}
-                  onPress={() => console.log("save pressed")}
+                  onPress={() => navigation.navigate("Home", { screen: "Trips" })}
                 >
                   <View style={styles.bottomSheetBtn}>
-                    <Text style={styles.calcBtn}>Save Trip</Text>
+                    <Text style={styles.calcBtn}>Select a Trip</Text>
                   </View>
                 </Pressable>
               )}
-
-              <Pressable
-                style={styles.btnContainer}
-                onPress={() => navigation.navigate("Plan")}
-              >
-                <View style={styles.bottomSheetBtn}>
-                  <Text style={styles.calcBtn}>Add Stop</Text>
-                </View>
-              </Pressable>
-
-              <Pressable
-                style={styles.btnContainer}
-                onPress={() => {
-                  console.log("discard pressed");
-                  navigation.goBack();
-                }}
-              >
-                <View style={styles.bottomSheetBtn}>
-                  <Text style={styles.calcBtn}>Discard Trip</Text>
-                </View>
-              </Pressable>
             </BottomSheetView>
           </BottomSheet>
         </View>
@@ -244,21 +259,10 @@ export default function TripDetailsScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
-  gestureRoot: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: DARK_THEME.primaryBackground,
-  },
-  container: {
-    flex: 1,
-    position: "relative",
-    backgroundColor: DARK_THEME.primaryBackground,
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
+  gestureRoot: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: DARK_THEME.primaryBackground },
+  container: { flex: 1, position: "relative", backgroundColor: DARK_THEME.primaryBackground },
+  map: { ...StyleSheet.absoluteFillObject },
   tripDetail: {
     position: "absolute",
     zIndex: 100,
@@ -270,10 +274,7 @@ const styles = StyleSheet.create({
     top: 0,
     padding: 15,
   },
-  info: {
-    flex: 1,
-    gap: 6,
-  },
+  info: { flex: 1, gap: 6 },
   metricsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -282,24 +283,10 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     marginBottom: 4,
   },
-  addressRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  label: {
-    color: DARK_THEME.primaryText,
-    fontWeight: "800",
-    fontSize: 13,
-    width: 45,
-  },
-  text: {
-    color: DARK_THEME.primaryText,
-    fontWeight: "500",
-    fontSize: 13,
-  },
-  scroll: {
-    flex: 1,
-  },
+  addressRow: { flexDirection: "row", alignItems: "center" },
+  label: { color: DARK_THEME.primaryText, fontWeight: "800", fontSize: 13, width: 45 },
+  text: { color: DARK_THEME.primaryText, fontWeight: "500", fontSize: 13 },
+  scroll: { flex: 1 },
   utilButtonsContainer: {
     position: "absolute",
     bottom: "52%",
@@ -323,10 +310,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: DARK_THEME.primaryBorder,
   },
-  bottomSheetHandle: {
-    backgroundColor: DARK_THEME.primaryText,
-    width: 40,
-  },
+  bottomSheetHandle: { backgroundColor: DARK_THEME.primaryText, width: 40 },
   bottomSheetContent: {
     flex: 1,
     justifyContent: "center",
@@ -342,12 +326,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 12,
   },
-  btnContainer: {
-    width: "100%",
-  },
-  calcBtn: {
-    color: DARK_THEME.primaryBackground,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  btnContainer: { width: "100%" },
+  calcBtn: { color: DARK_THEME.primaryBackground, fontSize: 16, fontWeight: "bold" },
 });
