@@ -26,8 +26,8 @@ import {
   Pressable,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { db, auth } from "../../../core/firebase/firebaseConfig";
@@ -43,6 +43,16 @@ import {
 import { DARK_THEME } from "../../../shared/style/ColorScheme"; 
 import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import polyline from "@mapbox/polyline";
+
+const withAlpha = (hexColor, alpha) => {
+  const hex = (hexColor || "").replace("#", "");
+  if (hex.length !== 6) return hexColor;
+  const int = Number.parseInt(hex, 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 function TripSection({ title, items, onToggle, onDelete, onEdit, onMapPress }) {
   if (!items || items.length === 0) return null;
@@ -179,6 +189,15 @@ function TripSection({ title, items, onToggle, onDelete, onEdit, onMapPress }) {
 export default function TripsSummaryScreen({ navigation }) {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: "",
+    message: "",
+    primaryBtnText: "Done",
+    onPrimaryPress: () => setModalVisible(false),
+    secondaryBtnText: null,
+    onSecondaryPress: null,
+  });
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -271,24 +290,30 @@ export default function TripsSummaryScreen({ navigation }) {
     });
   };
 
-  const handleDelete = (id) => {
-    Alert.alert("Delete Trip", "Are you sure you want to discard this trip?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteDoc(doc(db, "trips", id));
-          } catch (e) {
-            Alert.alert("Error", "Could not delete trip.");
-          }
-        },
-      },
-    ]);
+  const confirmDelete = async (id) => {
+    try {
+      await deleteDoc(doc(db, "trips", id));
+      setModalVisible(false);
+    } catch (e) {
+      setModalConfig({
+        title: "Error",
+        message: "Could not delete trip.",
+        primaryBtnText: "Okay",
+        onPrimaryPress: () => setModalVisible(false)
+      });
+    }
+  };
+
+  const handleDeleteRequest = (id) => {
+    setModalConfig({
+      title: "Delete Trip",
+      message: "Are you sure you want to discard this trip? This action cannot be undone.",
+      primaryBtnText: "Delete",
+      onPrimaryPress: () => confirmDelete(id),
+      secondaryBtnText: "Cancel",
+      onSecondaryPress: () => setModalVisible(false)
+    });
+    setModalVisible(true);
   };
 
   if (loading) {
@@ -314,7 +339,7 @@ export default function TripsSummaryScreen({ navigation }) {
             title="Your Saved Trips"
             items={trips}
             onToggle={toggleTrip}
-            onDelete={handleDelete}
+            onDelete={handleDeleteRequest}
             onEdit={handleEdit}
             onMapPress={handleMapPress}
           />
@@ -326,6 +351,38 @@ export default function TripsSummaryScreen({ navigation }) {
           )}
         </ScrollView>
       </View>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalMessage}>{modalConfig.message}</Text>
+            
+            <View style={styles.modalActionRow}>
+                {modalConfig.secondaryBtnText && (
+                    <TouchableOpacity
+                        style={[styles.modalBtn, styles.modalSecondaryBtn]}
+                        onPress={modalConfig.onSecondaryPress}
+                    >
+                        <Text style={styles.modalSecondaryBtnText}>{modalConfig.secondaryBtnText}</Text>
+                    </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity
+                    style={styles.modalBtn}
+                    onPress={modalConfig.onPrimaryPress}
+                >
+                    <Text style={styles.modalBtnText}>{modalConfig.primaryBtnText}</Text>
+                </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -336,7 +393,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
-
   mainTitle: {
     color: DARK_THEME.primaryText,
     fontSize: 26,
@@ -344,19 +400,16 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textAlign: "center",
   },
-
   mainSubtitle: {
     color: DARK_THEME.placeholder,
     fontSize: 15,
     textAlign: "center",
   },
-
   rowWrapper: {
     flexDirection: "row",
     alignItems: "center",
     paddingRight: 8,
   },
-
   row: {
     flex: 1,
     flexDirection: "row",
@@ -365,45 +418,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-
   rowLabel: {
     color: DARK_THEME.primaryText,
     fontSize: 16,
     fontWeight: "600",
   },
-
   rowSubLabel: {
     color: DARK_THEME.placeholder,
     fontSize: 12,
     marginTop: 2,
   },
-
   actionButton: {
     padding: 10,
   },
-
   container: {
     flex: 1,
     backgroundColor: DARK_THEME.primaryBackground,
   },
-
   scrollContent: {
     paddingHorizontal: 18,
     paddingTop: 8,
     paddingBottom: 32,
   },
-
   section: {
     marginBottom: 24,
   },
-
   sectionTitle: {
     color: DARK_THEME.primaryText,
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 12,
   },
-
   bubbleCard: {
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
@@ -412,12 +457,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: DARK_THEME.primaryBackground,
   },
-
   expandedContent: {
     backgroundColor: DARK_THEME.primaryBackground,
     paddingBottom: 4,
   },
-
   mapPreview: {
     height: 120,
     marginHorizontal: 14,
@@ -426,7 +469,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
   },
-
   mapPlaceholder: {
     height: 120,
     marginHorizontal: 14,
@@ -438,34 +480,84 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
   },
-
   details: {
     paddingHorizontal: 14,
     paddingTop: 12,
     paddingBottom: 14,
   },
-
   detailText: {
     color: DARK_THEME.primaryText,
     fontSize: 13,
     marginBottom: 2,
   },
-
   emptyText: {
     color: DARK_THEME.placeholder,
     textAlign: "center",
     marginTop: 50,
     fontSize: 16,
   },
-
   safeArea: {
     flex: 1,
     backgroundColor: DARK_THEME.primaryBackground,
   },
-
   loadingContainer: {
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: DARK_THEME.primaryBackground,
   },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: withAlpha(DARK_THEME.primaryBackground, 0.75), 
+    justifyContent: "center", 
+    alignItems: "center" 
+  },
+  modalBox: { 
+    backgroundColor: DARK_THEME.modalBackground, 
+    borderRadius: 14, 
+    padding: 28, 
+    width: "85%", 
+    alignItems: "center", 
+    gap: 12 
+  },
+  modalTitle: { 
+    color: DARK_THEME.primaryText, 
+    fontSize: 20, 
+    fontWeight: "bold" 
+  },
+  modalMessage: { 
+    color: DARK_THEME.placeholder, 
+    fontSize: 15, 
+    textAlign: "center",
+    lineHeight: 20
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+    width: '100%',
+    justifyContent: 'center'
+  },
+  modalBtn: { 
+    paddingVertical: 12, 
+    paddingHorizontal: 24, 
+    borderRadius: 8, 
+    backgroundColor: DARK_THEME.primaryText,
+    minWidth: 100,
+    alignItems: 'center'
+  },
+  modalBtnText: { 
+    color: DARK_THEME.primaryBackground, 
+    fontWeight: "bold", 
+    fontSize: 15 
+  },
+  modalSecondaryBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder
+  },
+  modalSecondaryBtnText: {
+    color: DARK_THEME.primaryText,
+    fontWeight: "bold",
+    fontSize: 15
+  }
 });

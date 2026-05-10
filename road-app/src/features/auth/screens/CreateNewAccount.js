@@ -7,8 +7,7 @@ Author: Brian Siebert
 Date: 03-11-2026
 */
 
-// Import React hooks and React Native building blocks for form layout
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -19,18 +18,15 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getAuth, createUserWithEmailAndPassword , sendEmailVerification} from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
 import { performFirestoreOperations } from "../../../core/firebase/firebaseConfig";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+.[^\s@]+$/;
 
-import { createUser } from "../services/authServices";
-
-// Main Create Account screen component
 export default function CreateNewAccountScreen({ navigation }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -40,7 +36,6 @@ export default function CreateNewAccountScreen({ navigation }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Basic validation
   const validate = () => {
     if (!firstName.trim()) {
       setError("Please enter your first name.");
@@ -58,8 +53,6 @@ export default function CreateNewAccountScreen({ navigation }) {
       setError("Please enter a password.");
       return false;
     }
-
-    // Requirement: at least 6 characters
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return false;
@@ -78,18 +71,18 @@ export default function CreateNewAccountScreen({ navigation }) {
     setLoading(true);
     const auth = getAuth();
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password,
-      );
+      
+      await createUserWithEmailAndPassword(auth, email, password);
 
-      performFirestoreOperations(firstName, lastName, email, "", "");
-      sendEmailVerification(auth.currentUser)
+      await performFirestoreOperations(firstName, lastName, email, "", "");
+      
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+      }
+
+      await AsyncStorage.setItem('showWelcomePopup', 'true');
 
       setLoading(false);
-      Alert.alert("Account created", "Your account was created successfully.");
-      navigation.goBack();
     } catch (err) {
       setLoading(false);
       let message = "An error occurred while creating your account.";
@@ -102,13 +95,11 @@ export default function CreateNewAccountScreen({ navigation }) {
             message = "The email address is invalid.";
             break;
           case "auth/weak-password":
-            message = "The password is too weak. Try a longer password.";
+            message = "The password is too weak.";
             break;
           default:
             message = err.message || message;
         }
-      } else if (err.message) {
-        message = err.message;
       }
       setError(message);
     }
@@ -119,7 +110,6 @@ export default function CreateNewAccountScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.screen}
     >
-      {/* Header bar with icon + screen title */}
       <View style={styles.header}>
         <View style={styles.headerIconCell}>
           <Ionicons
@@ -131,7 +121,6 @@ export default function CreateNewAccountScreen({ navigation }) {
         <Text style={styles.headerTitle}>Create Account</Text>
       </View>
 
-      {/* Scrollable form body */}
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -142,7 +131,7 @@ export default function CreateNewAccountScreen({ navigation }) {
           placeholder="First Name"
           placeholderTextColor={DARK_THEME.placeholder}
           value={firstName}
-          onChangeText={(t) => setFirstName(t)}
+          onChangeText={setFirstName}
         />
 
         <TextInput
@@ -150,7 +139,7 @@ export default function CreateNewAccountScreen({ navigation }) {
           placeholder="Last Name"
           placeholderTextColor={DARK_THEME.placeholder}
           value={lastName}
-          onChangeText={(t) => setLastName(t)}
+          onChangeText={setLastName}
         />
 
         <TextInput
@@ -158,7 +147,7 @@ export default function CreateNewAccountScreen({ navigation }) {
           placeholder="Email"
           placeholderTextColor={DARK_THEME.placeholder}
           value={email}
-          onChangeText={(t) => setEmail(t)}
+          onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
         />
@@ -168,7 +157,7 @@ export default function CreateNewAccountScreen({ navigation }) {
           placeholder="Password"
           placeholderTextColor={DARK_THEME.placeholder}
           value={password}
-          onChangeText={(t) => setPassword(t)}
+          onChangeText={setPassword}
           secureTextEntry
         />
 
@@ -177,14 +166,12 @@ export default function CreateNewAccountScreen({ navigation }) {
           placeholder="Confirm Password"
           placeholderTextColor={DARK_THEME.placeholder}
           value={confirmPassword}
-          onChangeText={(t) => setConfirmPassword(t)}
+          onChangeText={setConfirmPassword}
           secureTextEntry
         />
 
-        {/* Error message */}
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        {/* Primary account creation action */}
         <TouchableOpacity
           style={[
             styles.createButton,
@@ -211,7 +198,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   header: {
-    marginTop: 0,
     marginHorizontal: 18,
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
@@ -234,7 +220,6 @@ const styles = StyleSheet.create({
     color: DARK_THEME.primaryText,
     fontSize: 19,
     fontWeight: "700",
-    letterSpacing: 0.3,
   },
   content: {
     paddingHorizontal: 28,
@@ -266,9 +251,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  createButtonDisabled: {
-    opacity: 0.7,
-  },
+  createButtonDisabled: { opacity: 0.7 },
   createButtonText: {
     color: DARK_THEME.primaryBackground,
     fontSize: 14,

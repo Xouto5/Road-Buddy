@@ -20,6 +20,7 @@ Date: 04-29-2026
 /*
 Modified to provide a personalized dashboard experience.
 Displays a welcome message and a summary of the most recent trip.
+Updated to handle new user welcome popup via AsyncStorage.
 
 Author: Nathan Rochel
 Date: 05-09-2026
@@ -33,11 +34,14 @@ import {
   TouchableOpacity, 
   ScrollView, 
   ActivityIndicator,
-  Image 
+  Image,
+  Modal,
+  Pressable
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db, auth, getUserData } from "../../../../core/firebase/firebaseConfig";
 import { 
   collection, 
@@ -51,12 +55,36 @@ import { DARK_THEME } from "../../../../shared/style/ColorScheme";
 import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import polyline from "@mapbox/polyline";
 
+// Helper for modal overlay transparency
+const withAlpha = (hexColor, alpha) => {
+  const hex = (hexColor || "").replace("#", "");
+  if (hex.length !== 6) return hexColor;
+  const int = Number.parseInt(hex, 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 export default function HomeScreen({ navigation }) {
   const [recentTrip, setRecentTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState("");
+  const [welcomeModalVisible, setWelcomeModalVisible] = useState(false);
   
   const user = auth.currentUser;
+
+  // Check for the "New User" flag set during account creation
+  useEffect(() => {
+    const checkWelcome = async () => {
+      const shouldShow = await AsyncStorage.getItem('showWelcomePopup');
+      if (shouldShow === 'true') {
+        setWelcomeModalVisible(true);
+        await AsyncStorage.removeItem('showWelcomePopup');
+      }
+    };
+    checkWelcome();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -241,6 +269,29 @@ export default function HomeScreen({ navigation }) {
         </View>
 
       </ScrollView>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={welcomeModalVisible}
+        onRequestClose={() => setWelcomeModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setWelcomeModalVisible(false)}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Welcome to RoadBuddy!</Text>
+            <Text style={styles.modalMessage}>
+              Your account was created successfully. We're excited to help you plan your journeys!
+            </Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setWelcomeModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -298,5 +349,43 @@ const styles = StyleSheet.create({
     borderColor: DARK_THEME.primaryBorder, 
     borderRadius: 20 
   },
-  emptyText: { color: DARK_THEME.placeholder, textAlign: "center", marginTop: 12, fontSize: 15 }
+  emptyText: { color: DARK_THEME.placeholder, textAlign: "center", marginTop: 12, fontSize: 15 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: withAlpha(DARK_THEME.primaryBackground, 0.75),
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBox: {
+    backgroundColor: DARK_THEME.modalBackground,
+    borderRadius: 14,
+    padding: 28,
+    width: "85%",
+    alignItems: "center",
+    gap: 12,
+  },
+  modalTitle: {
+    color: DARK_THEME.primaryText,
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center"
+  },
+  modalMessage: {
+    color: DARK_THEME.placeholder,
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22
+  },
+  modalCloseButton: {
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    borderRadius: 8,
+    backgroundColor: DARK_THEME.primaryText,
+  },
+  modalCloseText: {
+    color: DARK_THEME.primaryBackground,
+    fontWeight: "bold",
+    fontSize: 15,
+  },
 });

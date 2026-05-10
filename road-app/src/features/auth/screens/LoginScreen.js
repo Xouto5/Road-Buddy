@@ -158,7 +158,6 @@ export default function LoginScreen({ navigation }) {
           />
         </View>
 
-        {/* Guidance text appears after 3 failed attempts */}
         {failedAttempts >= 3 && (
           <Text style={styles.guidanceText}>
             Having trouble? Try resetting your password.

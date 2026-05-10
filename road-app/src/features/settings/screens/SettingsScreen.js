@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -20,10 +19,22 @@ import {
   View,
   ActivityIndicator,
   TouchableOpacity,
+  Modal,
+  Pressable,
 } from "react-native";
 import { logOut, isUserVerified, verifyEmail } from "../../auth/services/authServices";
 import { getUserData, updateUserData } from "../../../core/firebase/firebaseConfig";
 import { DARK_THEME } from "../../../shared/style/ColorScheme";
+
+const withAlpha = (hexColor, alpha) => {
+  const hex = (hexColor || "").replace("#", "");
+  if (hex.length !== 6) return hexColor;
+  const int = Number.parseInt(hex, 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -44,6 +55,17 @@ export default function ProfileScreen() {
 
   const [editingKey, setEditingKey] = useState(null);
   const hasRun = useRef(false);
+
+  // Modal State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: "",
+    message: "",
+    primaryBtnText: "Done",
+    onPrimaryPress: () => setModalVisible(false),
+    secondaryBtnText: null,
+    onSecondaryPress: null,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,12 +100,18 @@ export default function ProfileScreen() {
         if (!verified && !hasRun.current) {
             hasRun.current = true;
             setTimeout(() => {
-              Alert.alert(
-                'Email is not verified',
-                'Please verify your email.',
-                [{ text: 'Okay' }, { text: 'Send Again', onPress: () => verifyEmail() }],
-                { cancelable: false },
-              );
+              setModalConfig({
+                title: "Email Not Verified",
+                message: "Please verify your email to secure your account.",
+                primaryBtnText: "Okay",
+                onPrimaryPress: () => setModalVisible(false),
+                secondaryBtnText: "Send Again",
+                onSecondaryPress: () => {
+                    verifyEmail();
+                    setModalVisible(false);
+                }
+              });
+              setModalVisible(true);
             }, 5000);
         }
     }
@@ -120,9 +148,22 @@ export default function ProfileScreen() {
       setPhone(updatedData.phone);
       setEmail(updatedData.email);
       setEditingKey(null);
-      Alert.alert("Success", "Profile updated!");
+      
+      setModalConfig({
+        title: "Success",
+        message: "Profile updated successfully!",
+        primaryBtnText: "Done",
+        onPrimaryPress: () => setModalVisible(false)
+      });
+      setModalVisible(true);
     } catch (error) {
-      Alert.alert("Error", "Failed to save.");
+      setModalConfig({
+        title: "Error",
+        message: "Failed to save profile changes.",
+        primaryBtnText: "Okay",
+        onPrimaryPress: () => setModalVisible(false)
+      });
+      setModalVisible(true);
     } finally {
       setLoading(false);
     }
@@ -133,11 +174,18 @@ export default function ProfileScreen() {
       logOut();
       return;
     }
-    Alert.alert("Unsaved changes", "Discard or save?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Discard", style: "destructive", onPress: () => logOut() },
-      { text: "Save", onPress: async () => { await onSaveChanges(); logOut(); } },
-    ]);
+    setModalConfig({
+        title: "Unsaved Changes",
+        message: "Would you like to save your changes or discard them before logging out?",
+        primaryBtnText: "Save & Logout",
+        onPrimaryPress: async () => { 
+            await onSaveChanges(); 
+            logOut(); 
+        },
+        secondaryBtnText: "Discard",
+        onSecondaryPress: () => logOut()
+    });
+    setModalVisible(true);
   };
 
   const renderPencilRow = (key, placeholder, draft, setDraft, keyboardType = "default") => {
@@ -218,6 +266,38 @@ export default function ProfileScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
+      
+      <Modal
+        transparent
+        animationType="fade"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalMessage}>{modalConfig.message}</Text>
+            
+            <View style={styles.modalActionRow}>
+                {modalConfig.secondaryBtnText && (
+                    <TouchableOpacity
+                        style={[styles.modalBtn, styles.modalSecondaryBtn]}
+                        onPress={modalConfig.onSecondaryPress}
+                    >
+                        <Text style={styles.modalSecondaryBtnText}>{modalConfig.secondaryBtnText}</Text>
+                    </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity
+                    style={styles.modalBtn}
+                    onPress={modalConfig.onPrimaryPress}
+                >
+                    <Text style={styles.modalBtnText}>{modalConfig.primaryBtnText}</Text>
+                </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -274,4 +354,59 @@ const styles = StyleSheet.create({
     fontSize: 15, 
     fontWeight: "600" 
   },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: withAlpha(DARK_THEME.primaryBackground, 0.75), 
+    justifyContent: "center", 
+    alignItems: "center" 
+  },
+  modalBox: { 
+    backgroundColor: DARK_THEME.modalBackground, 
+    borderRadius: 14, 
+    padding: 28, 
+    width: "85%", 
+    alignItems: "center", 
+    gap: 12 
+  },
+  modalTitle: { 
+    color: DARK_THEME.primaryText, 
+    fontSize: 20, 
+    fontWeight: "bold" 
+  },
+  modalMessage: { 
+    color: DARK_THEME.placeholder, 
+    fontSize: 15, 
+    textAlign: "center",
+    lineHeight: 20
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+    width: '100%',
+    justifyContent: 'center'
+  },
+  modalBtn: { 
+    paddingVertical: 12, 
+    paddingHorizontal: 24, 
+    borderRadius: 8, 
+    backgroundColor: DARK_THEME.primaryText,
+    minWidth: 100,
+    alignItems: 'center'
+  },
+  modalBtnText: { 
+    color: DARK_THEME.primaryBackground, 
+    fontWeight: "bold", 
+    fontSize: 15 
+  },
+  modalSecondaryBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: DARK_THEME.primaryBorder
+  },
+  modalSecondaryBtnText: {
+    color: DARK_THEME.primaryText,
+    fontWeight: "bold",
+    fontSize: 15
+  }
 });
