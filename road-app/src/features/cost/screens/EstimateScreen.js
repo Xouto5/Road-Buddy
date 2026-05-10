@@ -420,7 +420,15 @@ export default function EstimateScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: DARK_THEME.primaryBackground, paddingHorizontal: 20 },
+  safeArea: { 
+    flex: 1, 
+    backgroundColor: DARK_THEME.primaryBackground 
+  },
+  container: { 
+    flex: 1, 
+    backgroundColor: DARK_THEME.primaryBackground,
+    paddingHorizontal: 20 
+  },
   scrollContent: { paddingTop: 16, paddingBottom: 40 },
   headerContainer: { marginBottom: 28, alignItems: "center" },
   title: { color: DARK_THEME.primaryText, fontSize: 26, fontWeight: "bold", textAlign: "center" },
@@ -449,6 +457,5 @@ const styles = StyleSheet.create({
   secondaryButton: { borderWidth: 1, borderColor: DARK_THEME.primaryBorder, padding: 16, borderRadius: 10, alignItems: "center" },
   secondaryButtonText: { color: DARK_THEME.primaryText, fontSize: 16 },
   editButtonRow: { flexDirection: "row", gap: 12 },
-  safeArea: { flex: 1 },
   inputError: { borderColor: "#EF4444" }
 });

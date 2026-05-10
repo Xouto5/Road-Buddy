@@ -23,8 +23,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Polyline } from "react-native-maps";
 import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import Fontisto from "@expo/vector-icons/Fontisto";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 
 import { decode } from "@googlemaps/polyline-codec";
@@ -48,7 +46,7 @@ export default function TripDetailsScreen({ route }) {
     longitudeDelta: 0.05,
   });
 
-  const snapPoints = useMemo(() => ["16%", "45%"], []);
+  const snapPoints = useMemo(() => ["4%", "45%"], []);
 
   const handleSheetChanges = useCallback((index) => {
     console.log("Bottom sheet index:", index);
@@ -84,28 +82,6 @@ export default function TripDetailsScreen({ route }) {
       console.log(error);
       Alert.alert("Maps Error", "Could not open Maps.");
     }
-  };
-
-  const constructEstimateObject = () => {
-    if (!estimate) return {};
-
-    const {
-      startName,
-      destinationName,
-      gasPrice,
-      vehicle,
-    } = estimate;
-
-    return {
-      startLocation: startName || "",
-      destination: destinationName || "",
-      vehicle:
-        vehicle?.year && vehicle?.make && vehicle?.model
-          ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
-          : vehicle?.label || "",
-      mpg: vehicle?.mpg_combined ? vehicle.mpg_combined.toString() : "",
-      gasPrice: gasPrice ? gasPrice.toString() : "",
-    };
   };
 
   useEffect(() => {
@@ -177,64 +153,38 @@ export default function TripDetailsScreen({ route }) {
           </MapView>
 
           <View style={styles.tripDetail}>
-            <View style={styles.buttonContainer}>
-              <Pressable onPress={() => navigation.goBack()}>
-                <Ionicons name="arrow-back" size={30} color="#fafafa" />
-              </Pressable>
-            </View>
-
             <View style={styles.info}>
-              <View style={styles.textContainer}>
-                <Text style={styles.text}>
-                  Distance: {estimate?.distance || 0} mi
-                </Text>
+              <View style={styles.metricsRow}>
+                <Text style={styles.text}>{estimate?.distance || 0} mi</Text>
+                <Text style={styles.text}>Cost ${estimatedCost}</Text>
+                <Text style={styles.text}>{estimate?.duration || 0} min</Text>
               </View>
 
-              <View style={styles.textContainer}>
-                <Text style={styles.text}>Estimated Cost: ${estimatedCost}</Text>
-              </View>
-
-              <View style={styles.textContainer}>
-                <Text style={styles.text}>Start: </Text>
-                <ScrollView style={styles.scroll} horizontal>
+              <View style={styles.addressRow}>
+                <Text style={styles.label}>From: </Text>
+                <ScrollView style={styles.scroll} horizontal showsHorizontalScrollIndicator={false}>
                   <Text style={styles.text}>{estimate?.startName || ""}</Text>
                 </ScrollView>
               </View>
 
-              <View style={styles.textContainer}>
-                <Text style={styles.text}>Destination: </Text>
-                <ScrollView style={styles.scroll} horizontal>
+              <View style={styles.addressRow}>
+                <Text style={styles.label}>To: </Text>
+                <ScrollView style={styles.scroll} horizontal showsHorizontalScrollIndicator={false}>
                   <Text style={styles.text}>
                     {estimate?.destinationName || ""}
                   </Text>
                 </ScrollView>
               </View>
-
-              <View style={styles.textContainer}>
-                <Text style={styles.text}>
-                  Time: {estimate?.duration || 0} min
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.buttonContainer}>
-              <Pressable
-                onPress={() =>
-                  navigation.navigate("Estimate", constructEstimateObject())
-                }
-              >
-                <Fontisto name="more-v" size={30} color="#fafafa" />
-              </Pressable>
             </View>
           </View>
 
           <View style={styles.utilButtonsContainer}>
             <View style={styles.iconContainer}>
-              <Feather name="star" size={30} color="#fafafa" />
+              <Feather name="star" size={30} color={DARK_THEME.primaryBackground} />
             </View>
 
             <View style={styles.iconContainer}>
-              <AntDesign name="car" size={30} color="#fafafa" />
+              <AntDesign name="car" size={30} color={DARK_THEME.primaryBackground} />
             </View>
           </View>
 
@@ -254,7 +204,6 @@ export default function TripDetailsScreen({ route }) {
                 </View>
               </Pressable>
 
-              {/* Only show Save Trip if the trip is not yet saved in database */}
               {!tripId && (
                 <Pressable
                   style={styles.btnContainer}
@@ -300,6 +249,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    backgroundColor: DARK_THEME.primaryBackground,
   },
   container: {
     flex: 1,
@@ -313,74 +263,90 @@ const styles = StyleSheet.create({
     position: "absolute",
     zIndex: 100,
     elevation: 100,
-    backgroundColor: "rgba(125,125,125, 0.9)",
+    backgroundColor: DARK_THEME.primaryBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: DARK_THEME.primaryBorder,
     width: "100%",
     top: 0,
-    flexDirection: "row",
-    padding: 5,
-  },
-  buttonContainer: {
-    width: 30,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 15,
   },
   info: {
     flex: 1,
-    paddingHorizontal: 10,
+    gap: 6,
   },
-  utilButtonsContainer: {
-    position: "absolute",
-    bottom: "50%",
-    right: 10,
-    gap: 20,
-    zIndex: 50,
-    elevation: 50,
+  metricsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    paddingBottom: 8,
+    marginBottom: 4,
   },
-  iconContainer: {
-    padding: 6,
-    borderRadius: 50,
-    backgroundColor: "rgba(125,125,125, 0.65)",
+  addressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  label: {
+    color: DARK_THEME.primaryText,
+    fontWeight: "800",
+    fontSize: 13,
+    width: 45,
   },
   text: {
-    color: "#fafafa",
-  },
-  textContainer: {
-    flexDirection: "row",
+    color: DARK_THEME.primaryText,
+    fontWeight: "500",
+    fontSize: 13,
   },
   scroll: {
     flex: 1,
   },
+  utilButtonsContainer: {
+    position: "absolute",
+    bottom: "52%",
+    right: 15,
+    gap: 15,
+    zIndex: 50,
+    elevation: 50,
+  },
+  iconContainer: {
+    padding: 12,
+    borderRadius: 50,
+    backgroundColor: DARK_THEME.primaryText,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
   bottomSheet: {
-    backgroundColor: "rgba(125,125,125, 0.97)",
+    backgroundColor: DARK_THEME.primaryBackground,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
+    borderTopColor: DARK_THEME.primaryBorder,
   },
   bottomSheetHandle: {
-    backgroundColor: "#fafafa",
+    backgroundColor: DARK_THEME.primaryText,
+    width: 40,
   },
   bottomSheetContent: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: 14,
+    gap: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
   bottomSheetBtn: {
-    height: 48,
-    borderWidth: 0,
-    backgroundColor: "#e4e4e4",
+    height: 52,
+    backgroundColor: DARK_THEME.primaryText,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 10,
-    borderLeftWidth: 0,
-    borderRightWidth: 0,
+    borderRadius: 12,
   },
   btnContainer: {
     width: "100%",
   },
   calcBtn: {
-    color: "#000",
+    color: DARK_THEME.primaryBackground,
     fontSize: 16,
     fontWeight: "bold",
   },

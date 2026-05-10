@@ -50,11 +50,8 @@ function TripSection({ title, items, onToggle, onDelete, onEdit, onMapPress }) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
-
-      <View style={styles.card}>
-        {items.map((item, index) => {
-          const isLast = index === items.length - 1;
-
+      <View>
+        {items.map((item) => {
           const displayDate = item.updatedAt?.toDate
             ? `Last Edited: ${item.updatedAt
                 .toDate()
@@ -81,7 +78,7 @@ function TripSection({ title, items, onToggle, onDelete, onEdit, onMapPress }) {
             : [];
 
           return (
-            <View key={item.id}>
+            <View key={item.id} style={styles.bubbleCard}>
               <View style={styles.rowWrapper}>
                 <Pressable style={styles.row} onPress={() => onToggle(item.id)}>
                   <View style={{ flex: 1 }}>
@@ -171,8 +168,6 @@ function TripSection({ title, items, onToggle, onDelete, onEdit, onMapPress }) {
                   </View>
                 </View>
               )}
-
-              {!isLast && <View style={styles.divider} />}
             </View>
           );
         })}
@@ -246,7 +241,6 @@ export default function TripsSummaryScreen({ navigation }) {
   };
 
   const handleMapPress = (trip) => {
-    // Navigate to Overview with the trip's parameters
     navigation.navigate("Home", {
       screen: "Overview",
       params: {
@@ -298,14 +292,14 @@ export default function TripsSummaryScreen({ navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safeArea, styles.loadingContainer]}>
+      <SafeAreaView style={[styles.safeArea, styles.loadingContainer]} edges={["left", "right", "top", "bottom"]}>
         <ActivityIndicator size="large" color={DARK_THEME.primaryText} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top"]}>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right", "top", "bottom"]}>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.titleHeaderContainer}>
@@ -409,20 +403,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  card: {
+  bubbleCard: {
     borderWidth: 1,
     borderColor: DARK_THEME.primaryBorder,
-    borderRadius: 12,
+    borderRadius: 16,
+    marginBottom: 12,
     overflow: "hidden",
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: DARK_THEME.primaryBorder,
+    backgroundColor: DARK_THEME.primaryBackground,
   },
 
   expandedContent: {
     backgroundColor: DARK_THEME.primaryBackground,
+    paddingBottom: 4,
   },
 
   mapPreview: {
@@ -467,6 +459,7 @@ const styles = StyleSheet.create({
 
   safeArea: {
     flex: 1,
+    backgroundColor: DARK_THEME.primaryBackground,
   },
 
   loadingContainer: {
